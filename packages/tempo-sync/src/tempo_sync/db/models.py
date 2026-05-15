@@ -182,6 +182,13 @@ class DailyMetric(Base):
     weight_kg: Mapped[float | None] = mapped_column(Float)
     vo2max: Mapped[float | None] = mapped_column(Float)
     vibe_word: Mapped[str | None] = mapped_column(Text)
+    readiness_score: Mapped[int | None] = mapped_column(Integer)
+    readiness_level: Mapped[str | None] = mapped_column(String(20))
+    readiness_sleep_pct: Mapped[int | None] = mapped_column(Integer)
+    readiness_hrv_pct: Mapped[int | None] = mapped_column(Integer)
+    readiness_load_pct: Mapped[int | None] = mapped_column(Integer)
+    readiness_recovery_pct: Mapped[int | None] = mapped_column(Integer)
+    readiness_stress_pct: Mapped[int | None] = mapped_column(Integer)
 
 
 class DailyLoad(Base):

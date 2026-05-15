@@ -33,6 +33,29 @@ export interface DashboardResponse {
     routePolyline: string | null;
   } | null;
   plannedToday: null;
+  readiness: {
+    score: number;
+    delta7d: number;
+    tone: "green" | "yellow" | "red";
+    factors: Array<{
+      name: string;
+      value: string;
+      pct: number;
+      color: string;
+    }>;
+  } | null;
+  racePredictor: {
+    vo2max: number;
+    predictions: Array<{
+      distance: string;
+      time: string;
+      pace: string;
+      deltaSec: number;
+      focus: boolean;
+    }>;
+    trend10kSec: number[];
+    trendDelta: string;
+  } | null;
   week: Array<{
     dayLabel: string;
     dateLocal: string;

@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict
 
 from tempo_sync.api.deps import DbDep, TokenDep
-from tempo_sync.db.models import Activity, DailyLoad, DailyMetric
+from tempo_sync.db.models import Activity, DailyLoad, DailyMetric, RacePrediction
 
 router = APIRouter()
 
@@ -111,6 +111,35 @@ class StatusOut(BaseModel):
     tsb: float
 
 
+class ReadinessFactor(BaseModel):
+    name: str
+    value: str
+    pct: int
+    color: str
+
+
+class ReadinessOut(BaseModel):
+    score: int
+    delta7d: int
+    tone: str  # "green" | "yellow" | "red"
+    factors: list[ReadinessFactor]
+
+
+class RacePredictionOut(BaseModel):
+    distance: str
+    time: str
+    pace: str
+    deltaSec: int
+    focus: bool
+
+
+class RacePredictorOut(BaseModel):
+    vo2max: float
+    predictions: list[RacePredictionOut]
+    trend10kSec: list[float]
+    trendDelta: str
+
+
 class DashboardResponse(BaseModel):
     state: str
     todayLocal: str
@@ -122,6 +151,8 @@ class DashboardResponse(BaseModel):
     sleep: SleepOut | None
     lastSession: LastSession | None
     plannedToday: dict | None
+    readiness: ReadinessOut | None
+    racePredictor: RacePredictorOut | None
     week: list[WeekDay]
     weekTotals: WeekTotals
 
@@ -129,6 +160,15 @@ class DashboardResponse(BaseModel):
 def _fmt_pace(s_per_km: float) -> str:
     m = int(s_per_km // 60)
     s = int(s_per_km % 60)
+    return f"{m}:{s:02d}"
+
+
+def _fmt_time(seconds: int) -> str:
+    h = seconds // 3600
+    m = (seconds % 3600) // 60
+    s = seconds % 60
+    if h:
+        return f"{h}:{m:02d}:{s:02d}"
     return f"{m}:{s:02d}"
 
 
@@ -273,6 +313,72 @@ def get_dashboard(_token: TokenDep, db: DbDep):
     total_tss = sum(w.tss for w in week)
     sessions = sum(1 for w in week if w.sport)
 
+    # ── Readiness (from DailyMetric) ─────────────────────────────
+    readiness_out: ReadinessOut | None = None
+    if today_metric and today_metric.readiness_score is not None:
+        level = (today_metric.readiness_level or "").upper()
+        tone = "green" if level == "HIGH" else "yellow" if level == "MODERATE" else "red"
+        readiness_out = ReadinessOut(
+            score=today_metric.readiness_score,
+            delta7d=0,
+            tone=tone,  # type: ignore[arg-type]
+            factors=[
+                ReadinessFactor(name="Sleep",      value=str(today_metric.sleep_score or "—"),  pct=today_metric.readiness_sleep_pct or 0,    color="var(--run)"),
+                ReadinessFactor(name="HRV",        value=f"{today_metric.hrv_overnight} ms" if today_metric.hrv_overnight else "—", pct=today_metric.readiness_hrv_pct or 0, color="var(--run)"),
+                ReadinessFactor(name="Acute load", value="balanced",                             pct=today_metric.readiness_load_pct or 0,     color="var(--bike)"),
+                ReadinessFactor(name="Recovery",   value="—",                                   pct=today_metric.readiness_recovery_pct or 0, color="var(--run)"),
+                ReadinessFactor(name="Stress 24h", value=str(today_metric.stress_avg or "—"),   pct=today_metric.readiness_stress_pct or 0,   color="var(--swim)"),
+            ],
+        )
+
+    # ── Race predictor (from race_predictions table) ──────────────
+    race_predictor_out: RacePredictorOut | None = None
+    _DIST_MAP = {
+        "time5K":           ("5 km",   5.0),
+        "time10K":          ("10 km",  10.0),
+        "timeHalfMarathon": ("Half",   21.0975),
+        "timeMarathon":     ("Mara",   42.195),
+    }
+    _DIST_ORDER = list(_DIST_MAP.keys())
+    today_preds = {
+        r.distance: r.predicted_time_s
+        for r in db.query(RacePrediction).filter(RacePrediction.date == today).all()
+    }
+    ago30_preds = {
+        r.distance: r.predicted_time_s
+        for r in db.query(RacePrediction).filter(RacePrediction.date == today - timedelta(days=30)).all()
+    }
+    if today_preds:
+        vo2max_val = today_metric.vo2max if today_metric and today_metric.vo2max else 0.0
+        predictions = []
+        for key in _DIST_ORDER:
+            if key not in today_preds:
+                continue
+            label, dist_km = _DIST_MAP[key]
+            t_s = today_preds[key]
+            pace_s = t_s / dist_km if dist_km else 0
+            delta = (today_preds[key] - ago30_preds[key]) if key in ago30_preds else 0
+            predictions.append(RacePredictionOut(
+                distance=label,
+                time=_fmt_time(t_s),
+                pace=_fmt_pace(pace_s),
+                deltaSec=delta,
+                focus=(key == "time10K"),
+            ))
+        trend_rows = (
+            db.query(RacePrediction)
+            .filter(RacePrediction.distance == "time10K", RacePrediction.date >= today - timedelta(days=59))
+            .order_by(RacePrediction.date)
+            .all()
+        )
+        trend10k = [r.predicted_time_s for r in trend_rows]
+        race_predictor_out = RacePredictorOut(
+            vo2max=vo2max_val,
+            predictions=predictions,
+            trend10kSec=trend10k,
+            trendDelta="",
+        )
+
     return DashboardResponse(
         state=state,
         todayLocal=today_str,
@@ -294,6 +400,8 @@ def get_dashboard(_token: TokenDep, db: DbDep):
         sleep=sleep_out,
         lastSession=last_session,
         plannedToday=None,
+        readiness=readiness_out,
+        racePredictor=race_predictor_out,
         week=week,
         weekTotals=WeekTotals(volumeKm=total_km, tss=total_tss, sessions=sessions, rampPct=0.0),
     )

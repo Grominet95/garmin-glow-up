@@ -70,6 +70,22 @@ def _pull_day(client: GarminClient, db: Session, d: date, date_str: str) -> None
         pass
 
     try:
+        readiness_list = client.training_readiness(date_str)
+        if readiness_list:
+            # Take the most recent entry (list ordered newest-first)
+            r = readiness_list[0]
+            metric.readiness_score = r.get("score")
+            metric.readiness_level = r.get("level")
+            metric.readiness_sleep_pct = r.get("sleepScoreFactorPercent")
+            metric.readiness_hrv_pct = r.get("hrvFactorPercent")
+            metric.readiness_load_pct = r.get("acwrFactorPercent")
+            metric.readiness_recovery_pct = r.get("recoveryTimeFactorPercent")
+            metric.readiness_stress_pct = r.get("stressHistoryFactorPercent")
+            updated = True
+    except Exception as e:
+        logger.debug("Training readiness fetch error: %s", e)
+
+    try:
         bb_list = client.body_battery(date_str, date_str)
         if bb_list:
             # Each entry: {"date": ..., "charged": int, "drained": int, "bodyBatteryStatList": [...]}

@@ -64,5 +64,8 @@ class GarminClient:
     def race_predictions(self) -> dict:
         return self._require().get_race_predictions()
 
+    def training_readiness(self, date_str: str) -> list[dict]:
+        return self._require().get_training_readiness(date_str) or []
+
     def personal_records(self) -> list[dict]:
         return self._require().get_personal_record()
