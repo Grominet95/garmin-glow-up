@@ -1,23 +1,25 @@
-# Tempo
+# Garmin Glow Up
 
-A beautiful open-source training companion for Garmin athletes. Built as a native macOS app with a clean, opinionated interface that puts your data first.
+**What if Garmin Connect actually looked good?**
+
+Garmin makes great hardware. The software, not so much. Garmin Glow Up is a native macOS app that pulls your data from Garmin Connect and presents it the way it deserves: clean, fast, and actually pleasant to look at.
 
 Not affiliated with Garmin Ltd. Uses the unofficial Connect API. All Garmin trademarks belong to their respective owners.
 
 ---
 
-## What it does
+## What you get
 
-- Syncs your activities, health metrics, and training load from Garmin Connect
-- Gives you a daily dashboard: form curve (CTL / ATL / TSB), sleep, body battery, last session
-- Shows your real GPS routes, lap splits, and HR zone breakdown
-- Keeps everything local: your data lives on your machine, not in the cloud
+- A daily dashboard with your form curve (CTL / ATL / TSB), sleep quality, body battery, and last session at a glance
+- Real GPS route maps, lap splits, and HR zone breakdowns
+- Your training week laid out simply, no clutter
+- Everything runs locally. Your data stays on your machine.
 
 ---
 
 ## Architecture
 
-Two processes, one contract. They talk over a tiny REST API on loopback and never share a database directly.
+Two processes, one contract. They talk over a REST API on loopback and never share a database directly.
 
 ```
 tempo-sync        Python FastAPI on 127.0.0.1:8765
@@ -43,31 +45,13 @@ tempo-desktop     Tauri 2 + React 19 native app
 
 ## Quick start
 
-The setup script handles everything: dependencies, database, and Garmin login.
-
 ```bash
 git clone https://github.com/Grominet95/garmin-glow-up.git
 cd garmin-glow-up
 bash setup.sh
 ```
 
-Or step by step:
-
-```bash
-# 1. Install dependencies
-pnpm install
-uv sync --project packages/tempo-sync
-
-# 2. Run database migrations
-cd packages/tempo-sync && uv run alembic upgrade head && cd ../..
-
-# 3. Connect your Garmin account
-uv run --project packages/tempo-sync tempo-sync auth login
-
-# 4. Start both services (two terminals)
-uv run --project packages/tempo-sync tempo-sync serve   # terminal 1
-pnpm --filter tempo-desktop tauri dev                    # terminal 2
-```
+The setup script checks your prerequisites, installs dependencies, runs database migrations, and walks you through connecting your Garmin account. Credentials are stored in the macOS keychain, never on disk.
 
 ---
 
@@ -78,8 +62,8 @@ garmin-glow-up/
 ├── packages/
 │   ├── tempo-sync/       Python FastAPI service + SQLite
 │   └── tempo-desktop/    Tauri 2 + React 19 desktop app
-├── docs/                 Technical specifications (00 to 09)
-├── design/               Original Tempo design canvas and reference files
+├── docs/                 Technical specifications
+├── design/               Original design canvas and reference files
 └── .github/workflows/    CI + release pipelines
 ```
 
@@ -88,14 +72,10 @@ garmin-glow-up/
 ## Tech stack
 
 **Backend (tempo-sync)**
-- Python 3.12, FastAPI, SQLAlchemy, Alembic, APScheduler
-- garminconnect for Garmin SSO, fitparse for FIT files
-- Credentials stored in the OS keychain via keyring
+Python 3.12, FastAPI, SQLAlchemy, Alembic, APScheduler, garminconnect, fitparse, keyring
 
 **Frontend (tempo-desktop)**
-- React 19, TanStack Router, TanStack Query, Zustand
-- Tailwind CSS with custom design tokens
-- Tauri 2 (Rust) for the native shell, window management, and keychain IPC
+React 19, TanStack Router, TanStack Query, Zustand, Tailwind CSS, Tauri 2
 
 ---
 
