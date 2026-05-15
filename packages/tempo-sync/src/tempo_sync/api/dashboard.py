@@ -365,14 +365,28 @@ def get_dashboard(_token: TokenDep, db: DbDep):
         "timeMarathon":     ("Mara",   42.195),
     }
     _DIST_ORDER = list(_DIST_MAP.keys())
+    # Use most recent available date (Garmin predictions may not update daily)
+    latest_pred_date = (
+        db.query(RacePrediction.date)
+        .filter(RacePrediction.date <= today)
+        .order_by(RacePrediction.date.desc())
+        .scalar()
+    )
     today_preds = {
         r.distance: r.predicted_time_s
-        for r in db.query(RacePrediction).filter(RacePrediction.date == today).all()
-    }
+        for r in db.query(RacePrediction).filter(RacePrediction.date == latest_pred_date).all()
+    } if latest_pred_date else {}
+    ref_date = (latest_pred_date or today) - timedelta(days=30)
+    ref_pred_date = (
+        db.query(RacePrediction.date)
+        .filter(RacePrediction.date <= ref_date)
+        .order_by(RacePrediction.date.desc())
+        .scalar()
+    )
     ago30_preds = {
         r.distance: r.predicted_time_s
-        for r in db.query(RacePrediction).filter(RacePrediction.date == today - timedelta(days=30)).all()
-    }
+        for r in db.query(RacePrediction).filter(RacePrediction.date == ref_pred_date).all()
+    } if ref_pred_date else {}
     if today_preds:
         vo2max_val = today_metric.vo2max if today_metric and today_metric.vo2max else 0.0
         predictions = []
