@@ -1,6 +1,6 @@
 # Garmin Glow Up — Developer Handoff
 
-> Open-source desktop client for Garmin Connect. Codename **Tempo**.
+> Open-source desktop client for Garmin Connect.
 > This folder is the complete specification for implementing the live app on top of the existing HTML/React design (`Tempo.html` + `tempo/*.jsx` at repo root).
 
 ## Read order

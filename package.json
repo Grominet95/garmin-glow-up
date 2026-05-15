@@ -6,5 +6,8 @@
   "engines": {
     "node": ">=20",
     "pnpm": ">=9"
+  },
+  "scripts": {
+    "dev": "bash dev.sh"
   }
 }

@@ -19,7 +19,7 @@ divider() { echo -e "\n  ${DIM}$(printf '%.0s─' {1..46})${R}"; }
 # ── Header ──────────────────────────────────────────────────────
 clear
 echo ""
-echo -e "  ${ROSE_B}✦ Tempo${R}  ${DIM}by Garmin Glow Up${R}"
+echo -e "  ${ROSE_B}✦ Garmin Glow Up${R}"
 echo ""
 echo -e "  ${DIM}Setting up your local environment.${R}"
 divider
@@ -80,12 +80,13 @@ divider
 echo ""
 echo -e "  ${ROSE_B}✦  You're all set.${R}"
 echo ""
-echo -e "  Start Tempo with two terminals:\n"
-echo -e "  ${ROSE}Terminal 1${R}  ${DIM}(sync service)${R}"
-echo -e "  ${BOLD}  uv run --project packages/tempo-sync tempo-sync serve${R}"
+echo -e "  Start Garmin Glow Up:\n"
+echo -e "  ${ROSE}One command${R}  ${DIM}(server + app together)${R}"
+echo -e "  ${BOLD}  pnpm dev${R}"
 echo ""
-echo -e "  ${ROSE}Terminal 2${R}  ${DIM}(desktop app)${R}"
-echo -e "  ${BOLD}  pnpm --filter tempo-desktop tauri dev${R}"
+echo -e "  ${DIM}Or split across two terminals:${R}"
+echo -e "  ${DIM}  Terminal 1  ${R}TEMPO_DEV_SIDECAR=external uv run --project packages/tempo-sync tempo-sync serve"
+echo -e "  ${DIM}  Terminal 2  ${R}pnpm --filter tempo-desktop tauri dev"
 echo ""
 divider
 echo ""
