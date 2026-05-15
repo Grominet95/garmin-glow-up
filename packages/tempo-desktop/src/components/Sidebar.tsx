@@ -1,7 +1,7 @@
 import { Link, useMatchRoute } from "@tanstack/react-router";
+import logo from "../assets/logo.png";
 import { useTheme } from "../hooks/useTheme";
 import { Icon } from "./Icon";
-import logo from "../assets/logo.png";
 
 const NAV = [
   { to: "/", label: "Today", icon: "dashboard" as const, kbd: "1" },
@@ -22,7 +22,11 @@ export function Sidebar() {
       style={{ background: "var(--bg-0)", width: 200 }}
     >
       <div className="flex items-center gap-2 px-2 pb-4">
-        <img src={logo} alt="Garmin Glow Up" style={{ height: 80, width: "auto", objectFit: "contain" }} />
+        <img
+          src={logo}
+          alt="Garmin Glow Up"
+          style={{ height: 80, width: "auto", objectFit: "contain" }}
+        />
         <span className="ml-auto text-[10px] text-fg-3 font-mono">0.1.0</span>
       </div>
 

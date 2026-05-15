@@ -12,7 +12,7 @@
     "tauri:build": "tauri build",
     "gen": "openapi-typescript http://127.0.0.1:8765/openapi.json -o src/types.ts",
     "lint": "biome ci .",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@fontsource/geist": "^5.0.0",

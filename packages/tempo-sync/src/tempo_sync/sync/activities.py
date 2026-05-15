@@ -3,7 +3,6 @@ from __future__ import annotations
 import io
 import json
 import logging
-import math
 import zipfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -198,7 +197,11 @@ def _ingest_fit(act: Activity, blob: bytes, db: Session) -> None:
         ))
 
     # Simplified route polyline (max 120 points, aspect-ratio-aware)
-    geo = [(p["latitude"], p["longitude"]) for p in points if p.get("latitude") is not None and p.get("longitude") is not None]
+    geo = [
+        (p["latitude"], p["longitude"])
+        for p in points
+        if p.get("latitude") is not None and p.get("longitude") is not None
+    ]
     if len(geo) >= 2:
         step = max(1, len(geo) // 120)
         sampled = geo[::step]

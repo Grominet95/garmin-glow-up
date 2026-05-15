@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import { create } from "zustand";
 import { api, sse } from "../lib/api";
 
@@ -59,7 +59,11 @@ export function useSyncStatus() {
   }, [ready, setStatus, setMfaRequired, qc]);
 
   const triggerSync = async () => {
-    await api("/sync/run", { method: "POST", body: JSON.stringify({ force: false }), headers: { "Content-Type": "application/json" } });
+    await api("/sync/run", {
+      method: "POST",
+      body: JSON.stringify({ force: false }),
+      headers: { "Content-Type": "application/json" },
+    });
   };
 
   return { ...store, triggerSync };

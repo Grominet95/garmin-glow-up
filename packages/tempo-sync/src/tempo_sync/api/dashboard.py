@@ -323,11 +323,36 @@ def get_dashboard(_token: TokenDep, db: DbDep):
             delta7d=0,
             tone=tone,  # type: ignore[arg-type]
             factors=[
-                ReadinessFactor(name="Sleep",      value=str(today_metric.sleep_score or "—"),  pct=today_metric.readiness_sleep_pct or 0,    color="var(--run)"),
-                ReadinessFactor(name="HRV",        value=f"{today_metric.hrv_overnight} ms" if today_metric.hrv_overnight else "—", pct=today_metric.readiness_hrv_pct or 0, color="var(--run)"),
-                ReadinessFactor(name="Acute load", value="balanced",                             pct=today_metric.readiness_load_pct or 0,     color="var(--bike)"),
-                ReadinessFactor(name="Recovery",   value="—",                                   pct=today_metric.readiness_recovery_pct or 0, color="var(--run)"),
-                ReadinessFactor(name="Stress 24h", value=str(today_metric.stress_avg or "—"),   pct=today_metric.readiness_stress_pct or 0,   color="var(--swim)"),
+                ReadinessFactor(
+                    name="Sleep",
+                    value=str(today_metric.sleep_score or "—"),
+                    pct=today_metric.readiness_sleep_pct or 0,
+                    color="var(--run)",
+                ),
+                ReadinessFactor(
+                    name="HRV",
+                    value=f"{today_metric.hrv_overnight} ms" if today_metric.hrv_overnight else "—",
+                    pct=today_metric.readiness_hrv_pct or 0,
+                    color="var(--run)",
+                ),
+                ReadinessFactor(
+                    name="Acute load",
+                    value="balanced",
+                    pct=today_metric.readiness_load_pct or 0,
+                    color="var(--bike)",
+                ),
+                ReadinessFactor(
+                    name="Recovery",
+                    value="—",
+                    pct=today_metric.readiness_recovery_pct or 0,
+                    color="var(--run)",
+                ),
+                ReadinessFactor(
+                    name="Stress 24h",
+                    value=str(today_metric.stress_avg or "—"),
+                    pct=today_metric.readiness_stress_pct or 0,
+                    color="var(--swim)",
+                ),
             ],
         )
 

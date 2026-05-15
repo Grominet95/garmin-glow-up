@@ -17,7 +17,11 @@ export function useTheme() {
 
   useEffect(() => {
     document.body.classList.toggle("tempo--light", theme === "light");
-    try { localStorage.setItem(KEY, theme); } catch { /* noop */ }
+    try {
+      localStorage.setItem(KEY, theme);
+    } catch {
+      /* noop */
+    }
   }, [theme]);
 
   const toggle = () => setThemeState((t) => (t === "dark" ? "light" : "dark"));

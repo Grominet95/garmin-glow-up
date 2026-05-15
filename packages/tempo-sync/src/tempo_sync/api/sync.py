@@ -51,7 +51,7 @@ async def sync_status(_token: TokenDep):
                 try:
                     data = await asyncio.wait_for(q.get(), timeout=30)
                     yield f"event: status\ndata: {json.dumps(data)}\n\n"
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     yield ": keep-alive\n\n"
         finally:
             _subscribers.discard(q)
