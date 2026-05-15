@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Garmin Glow Up — open-source desktop client for Garmin Connect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;450;500;550;600;700&family=Geist+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tempo/styles.css">
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      /* Cool neutral canvas — lets cards breathe; color only carries meaning */
+      background: #f2f3f5;
+      font-family: "Geist", system-ui, sans-serif;
+    }
+  </style>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" src="tempo/design-canvas.jsx"></script>
+  <script type="text/babel" src="tempo/tweaks-panel.jsx"></script>
+  <script type="text/babel" src="tempo/shared.jsx"></script>
+  <script type="text/babel" src="tempo/activity.jsx"></script>
+  <script type="text/babel" src="tempo/activity-variants.jsx"></script>
+  <script type="text/babel" src="tempo/dashboard.jsx"></script>
+  <script type="text/babel" src="tempo/dashboard-empty.jsx"></script>
+  <script type="text/babel" src="tempo/training-load.jsx"></script>
+  <script type="text/babel" src="tempo/calendar.jsx"></script>
+  <script type="text/babel" src="tempo/health.jsx"></script>
+  <script type="text/babel" src="tempo/progress.jsx"></script>
+
+  <script type="text/babel">
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "theme": "light",
+      "units": "metric",
+      "accent": "run",
+      "showNotes": true
+    }/*EDITMODE-END*/;
+
+    const ACCENTS = {
+      run:   { name: "Lime (Run)",         v: "oklch(0.86 0.23 135)" },
+      bike:  { name: "Solar (Bike)",       v: "oklch(0.90 0.20 95)"  },
+      swim:  { name: "Cyan (Swim)",        v: "oklch(0.80 0.16 215)" },
+      trail: { name: "Tangerine (Trail)",  v: "oklch(0.72 0.21 50)"  },
+      lift:  { name: "Violet (Strength)",  v: "oklch(0.62 0.27 295)" },
+    };
+
+    function App() {
+      const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+      // Apply theme + accent via CSS vars on the body
+      React.useEffect(() => {
+        document.body.classList.toggle("tempo--light", t.theme === "light");
+        const acc = t.accent === "pink"
+          ? "oklch(0.70 0.26 5)"
+          : ACCENTS[t.accent]?.v || ACCENTS.run.v;
+        document.documentElement.style.setProperty("--app-accent", acc);
+      }, [t.theme, t.accent]);
+
+      return (
+        <>
+          <DesignCanvas>
+
+            <DCSection id="hero" title="Activity Detail · the hero screen"
+              subtitle="The pitch in one screenshot — map, multi-series chart (hover the chart!), splits barcode, HR zones, run dynamics, training effect.">
+              <DCArtboard id="activity" label="Activity Detail · Tempo Run" width={1280} height={830}>
+                <MacChrome title="Glow Up — Tempo Loop · 14.0 km" accent="var(--run)">
+                  <ActivityDetail/>
+                </MacChrome>
+              </DCArtboard>
+              <DCArtboard id="activity-intervals" label="Variant · 5×1k Intervals" width={1280} height={830}>
+                <MacChrome title="Glow Up — 5×1k threshold · 11.2 km" accent="var(--run)">
+                  <ActivityIntervals/>
+                </MacChrome>
+              </DCArtboard>
+              <DCArtboard id="activity-nopower" label="Variant · Bike, no power meter" width={1280} height={830}>
+                <MacChrome title="Glow Up — Z2 endurance · 42 km" accent="var(--bike)">
+                  <ActivityNoPower/>
+                </MacChrome>
+              </DCArtboard>
+            </DCSection>
+
+            <DCSection id="daily" title="Daily surface"
+              subtitle="What opens first thing in the morning. Empty state matters as much as the full one.">
+              <DCArtboard id="dashboard" label="Today · synced" width={1280} height={830}>
+                <MacChrome title="Glow Up — Today" accent="var(--run)">
+                  <Dashboard/>
+                </MacChrome>
+              </DCArtboard>
+              <DCArtboard id="dashboard-empty" label="Today · rest day, no recent sync" width={1280} height={830}>
+                <MacChrome title="Glow Up — Today" accent="var(--fg-2)">
+                  <DashboardEmpty/>
+                </MacChrome>
+              </DCArtboard>
+            </DCSection>
+
+            <DCSection id="longterm" title="Long-term views"
+              subtitle="Training load, calendar history, body data, progression and records.">
+              <DCArtboard id="load" label="Training Load · 120 days" width={1280} height={830}>
+                <MacChrome title="Glow Up — Training Load" accent="var(--bike)">
+                  <TrainingLoad/>
+                </MacChrome>
+              </DCArtboard>
+              <DCArtboard id="calendar" label="Calendar · 12 months" width={1280} height={830}>
+                <MacChrome title="Glow Up — Calendar" accent="var(--swim)">
+                  <CalendarView/>
+                </MacChrome>
+              </DCArtboard>
+              <DCArtboard id="health" label="Health overview" width={1280} height={830}>
+                <MacChrome title="Glow Up — Health" accent="var(--lift)">
+                  <HealthView/>
+                </MacChrome>
+              </DCArtboard>
+              <DCArtboard id="progress" label="Progress & records" width={1280} height={830}>
+                <MacChrome title="Glow Up — Progress" accent="var(--trail)">
+                  <ProgressView/>
+                </MacChrome>
+              </DCArtboard>
+            </DCSection>
+
+            <DCPostIt x={20} y={-130} w={300} rotation={-1.4}>
+              <b>Garmin Glow Up</b> · open-source desktop client for Garmin Connect.<br/>
+              <b>Discipline</b> — the canvas stays neutral (cool grey). Cards stay clean. Color only carries meaning:<br/>
+              <span style={{display:'inline-flex', gap:5, margin:'4px 0 6px', alignItems:'center', flexWrap:'wrap'}}>
+                <span style={{width:11,height:11,borderRadius:3,background:'oklch(0.82 0.15 215)'}}></span>
+                <span style={{width:11,height:11,borderRadius:3,background:'oklch(0.86 0.22 145)'}}></span>
+                <span style={{width:11,height:11,borderRadius:3,background:'oklch(0.89 0.20 95)'}}></span>
+                <span style={{width:11,height:11,borderRadius:3,background:'oklch(0.74 0.21 50)'}}></span>
+                <span style={{width:11,height:11,borderRadius:3,background:'oklch(0.68 0.27 10)'}}></span>
+                <span style={{fontFamily:'monospace', fontSize:10, color:'#777', marginLeft:4}}>HR zones · cool → hot</span>
+              </span>
+              • <b>Sport-coded</b> accents — lime/solar/cyan/tangerine/violet — saturated, same family, applied only on dataviz.<br/>
+              • <b>Rose</b> is the brand · used on the mark, PR sparkles, today-dot. Never on charts.<br/>
+              • <b>HR zones</b> are vertical density bars, never a pie. <b>Splits barcode</b> reads pace + HR + elevation in one row.<br/>
+              <span style={{color:'#666'}}>Open Tweaks to swap theme, units, accent.</span>
+            </DCPostIt>
+
+            <DCPostIt x={1360} y={-130} w={300} rotation={1.1}>
+              <b>Logo note:</b> the mark is an original "rising arc → glowing dot," now sitting on the rose→violet→cyan gradient — speaks to <i>glow up</i> directly (going up, lighting up). Not reproducing the Garmin triangle: this lives on GitHub and that trademark line is one we shouldn't cross.<br/><br/>
+              <b>Try it:</b> hover the synchronized chart in any Activity screen — cursor and the four right-aligned readouts update live.<br/><br/>
+              <b>Variant slot:</b> <span style={{fontFamily:'monospace'}}>&lt;ActivityDetail&gt;</span> accepts overrides for map, hero stats, zones, dynamics, training effect, and a <span style={{fontFamily:'monospace'}}>missing[]</span> array.
+            </DCPostIt>
+
+            {t.showNotes && (
+              <DCPostIt x={2700} y={-130} w={260} rotation={-0.8}>
+                <b>Fun touches</b> (used <i>parcimoneusement</i> — kept tiny since the canvas is now disciplined):<br/>
+                • Vibe chip on Dashboard — "today's word"<br/>
+                • Rose sparkle on PR moments (Progress)<br/>
+                • Rose today-dot in the year heatmap (Calendar)<br/>
+                • Soft rose halo on the brand mark
+              </DCPostIt>
+            )}
+          </DesignCanvas>
+
+          <TweaksPanel title="Tempo · tweaks">
+            <TweakSection label="Theme">
+              <TweakRadio
+                label="Mode"
+                value={t.theme}
+                onChange={v => setTweak("theme", v)}
+                options={[
+                  { value: "dark",  label: "Dark" },
+                  { value: "light", label: "Light" },
+                ]}
+              />
+              <TweakSelect
+                label="Global accent"
+                value={t.accent}
+                onChange={v => setTweak("accent", v)}
+                options={[
+                  { value: "run",   label: "Lime · Run" },
+                  { value: "bike",  label: "Solar · Bike" },
+                  { value: "swim",  label: "Cyan · Swim" },
+                  { value: "trail", label: "Tangerine · Trail" },
+                  { value: "lift",  label: "Violet · Strength" },
+                  { value: "pink",  label: "Rose · Glow Up" },
+                ]}
+              />
+            </TweakSection>
+
+            <TweakSection label="Display">
+              <TweakRadio
+                label="Units"
+                value={t.units}
+                onChange={v => setTweak("units", v)}
+                options={[
+                  { value: "metric",   label: "Metric" },
+                  { value: "imperial", label: "Imperial" },
+                ]}
+              />
+              <TweakToggle
+                label="Show design notes"
+                value={t.showNotes}
+                onChange={v => setTweak("showNotes", v)}
+              />
+            </TweakSection>
+          </TweaksPanel>
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
+</body>
+</html>

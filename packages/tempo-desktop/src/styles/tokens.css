@@ -1,0 +1,76 @@
+/* Tempo design tokens — ported from tempo/styles.css
+   Drop into Tailwind via tailwind.config.ts variables.
+*/
+:root {
+  --rose: oklch(0.7 0.26 5);
+  --cyan: oklch(0.8 0.16 215);
+  --solar: oklch(0.9 0.2 95);
+  --lime: oklch(0.86 0.23 135);
+  --violet: oklch(0.62 0.27 295);
+  --tangerine: oklch(0.72 0.21 50);
+
+  --run: var(--lime);
+  --bike: var(--solar);
+  --swim: var(--cyan);
+  --trail: var(--tangerine);
+  --lift: var(--violet);
+  --walk: oklch(0.82 0.06 90);
+
+  --pink: var(--rose);
+  --pink-ink: oklch(0.22 0.06 5);
+
+  --z1: oklch(0.82 0.15 215);
+  --z2: oklch(0.86 0.22 145);
+  --z3: oklch(0.89 0.2 95);
+  --z4: oklch(0.74 0.21 50);
+  --z5: oklch(0.68 0.27 10);
+
+  --grad-effort: linear-gradient(90deg, var(--z1), var(--z2), var(--z3), var(--z4), var(--z5));
+  --grad-glow: linear-gradient(95deg, var(--rose) 0%, var(--violet) 45%, var(--cyan) 100%);
+  --grad-glow-wide: linear-gradient(
+    95deg,
+    var(--solar),
+    var(--rose) 35%,
+    var(--violet) 65%,
+    var(--cyan)
+  );
+
+  /* Dark theme (default) */
+  --bg-0: #0e0f12;
+  --bg-1: #16181c;
+  --bg-2: #1c1f24;
+  --bg-3: #24272d;
+  --line: #2a2d34;
+  --line-soft: #22252b;
+  --fg-0: #f1f2f4;
+  --fg-1: #b6b8bc;
+  --fg-2: #797c83;
+  --fg-3: #50535a;
+
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  --shadow-soft: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 4px 18px rgba(0, 0, 0, 0.25);
+
+  --accent: var(--run);
+  --accent-ink: oklch(0.18 0.02 270);
+}
+
+.tempo--light {
+  --bg-0: #f2f3f5;
+  --bg-1: #ffffff;
+  --bg-2: #f6f7f9;
+  --bg-3: #eaecf0;
+  --line: #d9dce1;
+  --line-soft: #e7e9ed;
+  --fg-0: #15171b;
+  --fg-1: #4b4f56;
+  --fg-2: #7a7f86;
+  --fg-3: #aaaeb5;
+  --accent-ink: #ffffff;
+}

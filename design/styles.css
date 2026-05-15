@@ -1,0 +1,383 @@
+/* Tempo — design tokens · Candy palette (v2)
+   ──────────────────────────────────────────────────────────────
+   Six saturated colors that sing together — Apple-Sports-meets-Arc.
+   Same chroma family (≈0.20–0.27), varied hue. Used both as sport-codes
+   AND as personality. Card washes vary the page rhythm; a signature
+   rose→violet→cyan gradient lives on hero numbers.
+*/
+:root {
+  /* ── The candy six ─────────────────────────────────────────── */
+  --rose:      oklch(0.70 0.26 5);     /* magenta · joy + brand */
+  --cyan:      oklch(0.80 0.16 215);   /* electric cyan · swim · recovery */
+  --solar:     oklch(0.90 0.20 95);    /* solar yellow · bike · energy */
+  --lime:      oklch(0.86 0.23 135);   /* apple green · run · productive */
+  --violet:    oklch(0.62 0.27 295);   /* punchy violet · lift · peak */
+  --tangerine: oklch(0.72 0.21 50);    /* warm orange · trail · push */
+
+  /* Sport-coded aliases (keep the existing API) */
+  --run:   var(--lime);
+  --bike:  var(--solar);
+  --swim:  var(--cyan);
+  --trail: var(--tangerine);
+  --lift:  var(--violet);
+  --walk:  oklch(0.82 0.06 90);
+
+  /* Brand pink alias — still magenta, just sharper now */
+  --pink:      var(--rose);
+  --pink-ink:  oklch(0.22 0.06 5);
+
+  /* HR zones — cool → hot, saturated all the way */
+  --z1: oklch(0.82 0.15 215);   /* cyan */
+  --z2: oklch(0.86 0.22 145);   /* lime */
+  --z3: oklch(0.89 0.20 95);    /* solar */
+  --z4: oklch(0.74 0.21 50);    /* tangerine */
+  --z5: oklch(0.68 0.27 10);    /* magenta-hot */
+
+  --grad-effort: linear-gradient(90deg, var(--z1), var(--z2), var(--z3), var(--z4), var(--z5));
+
+  /* Signature gradient — used on hero numbers, key callouts, brand mark */
+  --grad-glow: linear-gradient(95deg, var(--rose) 0%, var(--violet) 45%, var(--cyan) 100%);
+  --grad-glow-wide: linear-gradient(95deg, var(--solar), var(--rose) 35%, var(--violet) 65%, var(--cyan));
+
+  /* ── Neutrals · DARK (default) — cool charcoal, no hue ── */
+  --bg-0: #0e0f12;          /* canvas */
+  --bg-1: #16181c;          /* card */
+  --bg-2: #1c1f24;          /* elevated */
+  --bg-3: #24272d;          /* hover */
+  --line:      #2a2d34;
+  --line-soft: #22252b;
+  --fg-0: #f1f2f4;          /* primary text */
+  --fg-1: #b6b8bc;          /* secondary */
+  --fg-2: #797c83;          /* tertiary */
+  --fg-3: #50535a;          /* quaternary */
+
+  /* Type */
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+
+  /* Radii / shadows */
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  --shadow-soft: 0 1px 0 rgba(255,255,255,0.04) inset, 0 4px 18px rgba(0,0,0,0.25);
+
+  /* Accent default = run (lime) */
+  --accent: var(--run);
+  --accent-ink: oklch(0.18 0.02 270);
+}
+
+/* ── Neutrals · LIGHT — cool grey canvas, pure white cards ── */
+.tempo--light {
+  --bg-0: #f2f3f5;          /* canvas — slightly bluish off-white */
+  --bg-1: #ffffff;          /* card */
+  --bg-2: #f6f7f9;          /* elevated */
+  --bg-3: #eaecf0;          /* hover */
+  --line:      #d9dce1;
+  --line-soft: #e7e9ed;
+  --fg-0: #15171b;
+  --fg-1: #4b4f56;
+  --fg-2: #7a7f86;
+  --fg-3: #aaaeb5;
+  --accent-ink: #ffffff;
+}
+
+/* ── Tempo screen scaffold ───────────────────────────────────── */
+.tempo {
+  width: 1280px;
+  height: 800px;
+  background: var(--bg-0);
+  color: var(--fg-0);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "ss03", "cv11", "tnum";
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.005em;
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  position: relative;
+  overflow: hidden;
+}
+
+.tempo *, .tempo *::before, .tempo *::after { box-sizing: border-box; }
+
+.num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+.mono { font-family: var(--font-mono); }
+
+/* Sidebar */
+.tempo .side {
+  background: var(--bg-0);
+  border-right: 1px solid var(--line-soft);
+  display: flex; flex-direction: column;
+  padding: 18px 14px 14px;
+  gap: 4px;
+}
+.tempo .side .brand {
+  display: flex; align-items: center; gap: 9px;
+  padding: 4px 8px 18px;
+  font-weight: 600; letter-spacing: -0.02em;
+  font-size: 15px;
+}
+.tempo .side .brand .mark {
+  width: 22px; height: 22px; border-radius: 7px;
+  background: var(--rose);
+  position: relative;
+  display: grid; place-items: center;
+  color: #fff;
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--rose) 25%, transparent),
+    0 0 12px color-mix(in oklch, var(--rose) 45%, transparent);
+}
+.tempo .side .brand .wordmark { display: flex; align-items: baseline; gap: 1px; }
+.tempo .side .brand .wordmark .dot {
+  width: 4px; height: 4px; border-radius: 999px;
+  background: var(--rose); margin: 0 0 4px 1px;
+  box-shadow: 0 0 6px var(--rose);
+}
+.tempo .side .nav-section {
+  font-size: 11px; color: var(--fg-2); text-transform: uppercase;
+  letter-spacing: 0.08em; font-weight: 500;
+  padding: 14px 8px 6px;
+}
+.tempo .side a, .tempo .side .navi {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 8px; border-radius: var(--r-sm);
+  color: var(--fg-1); font-size: 13px; font-weight: 450;
+  text-decoration: none;
+  cursor: default;
+}
+.tempo .side .navi.active {
+  background: var(--bg-2);
+  color: var(--fg-0);
+}
+.tempo .side .navi .kbd {
+  margin-left: auto; font-family: var(--font-mono); font-size: 10.5px;
+  color: var(--fg-3);
+}
+
+/* Top bar */
+.tempo .topbar {
+  height: 52px; min-height: 52px;
+  border-bottom: 1px solid var(--line-soft);
+  display: flex; align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+}
+.tempo .crumb {
+  font-size: 13px; color: var(--fg-1);
+  display: flex; align-items: center; gap: 8px;
+}
+.tempo .crumb b { color: var(--fg-0); font-weight: 500; }
+.tempo .crumb .sep { color: var(--fg-3); }
+
+.tempo .topbar .spacer { flex: 1; }
+.tempo .topbar .pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 999px;
+  background: var(--bg-2); color: var(--fg-1);
+  font-size: 12px;
+  border: 1px solid var(--line-soft);
+}
+.tempo .topbar .pill .dot {
+  width: 6px; height: 6px; border-radius: 999px; background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 30%, transparent),
+              0 0 8px color-mix(in oklch, var(--accent) 60%, transparent);
+  animation: tempo-pulse 1.8s ease-in-out infinite;
+}
+@keyframes tempo-pulse {
+  50% { box-shadow: 0 0 0 7px color-mix(in oklch, var(--accent) 0%, transparent),
+                    0 0 12px color-mix(in oklch, var(--accent) 0%, transparent); }
+}
+
+.tempo .main {
+  display: grid; grid-template-rows: 52px 1fr;
+  overflow: hidden;
+}
+.tempo .scroll {
+  overflow: hidden;
+  padding: 20px 24px 24px;
+}
+
+/* ── Card primitive ──────────────────────────────────────────── */
+.card {
+  background: var(--bg-1);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  position: relative;
+}
+.card h3 {
+  margin: 0 0 10px;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--fg-2); font-weight: 500;
+}
+.card .row { display: flex; align-items: baseline; gap: 8px; }
+.card .big { font-size: 30px; font-weight: 550; letter-spacing: -0.03em; }
+.card .unit { color: var(--fg-2); font-size: 13px; }
+
+/* ── Card washes — neutralized; structure stays for future use ── */
+.card.wash-rose,
+.card.wash-cyan,
+.card.wash-solar,
+.card.wash-lime,
+.card.wash-violet,
+.card.wash-tangerine,
+.card.flood {
+  background: var(--bg-1);
+  border-color: var(--line-soft);
+}
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 7px; border-radius: 6px;
+  background: var(--bg-2); color: var(--fg-1);
+  font-size: 11px; border: 1px solid var(--line-soft);
+}
+.chip .swatch {
+  width: 8px; height: 8px; border-radius: 2px;
+}
+
+/* Sport color helper */
+.sport-run   { color: var(--run); }
+.sport-bike  { color: var(--bike); }
+.sport-swim  { color: var(--swim); }
+.sport-trail { color: var(--trail); }
+.sport-lift  { color: var(--lift); }
+
+.bg-run   { background: var(--run); }
+.bg-bike  { background: var(--bike); }
+.bg-swim  { background: var(--swim); }
+.bg-trail { background: var(--trail); }
+.bg-lift  { background: var(--lift); }
+
+/* Subtle striped placeholder pattern */
+.placeholder-stripes {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255,255,255,0.025) 0,
+    rgba(255,255,255,0.025) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+}
+
+/* Hairline grid lines for charts */
+.grid-h line { stroke: var(--line-soft); stroke-width: 1; }
+.grid-h text { fill: var(--fg-2); font-size: 10px; font-family: var(--font-mono); }
+
+/* ── Signature glow — DISABLED (color carries meaning, not chrome) ── */
+.glow {
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  color: var(--fg-0);
+  -webkit-text-fill-color: currentColor;
+  animation: none;
+}
+.glow.wide { background-image: none; }
+
+/* Pill that carries the brand gradient — for "new PR", state badges, etc. */
+.gradient-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 9px; border-radius: 999px;
+  background: var(--grad-glow);
+  color: #fff;
+  font-size: 11px; font-weight: 500;
+  letter-spacing: -0.005em;
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--rose) 25%, transparent),
+              0 4px 14px color-mix(in oklch, var(--violet) 30%, transparent);
+}
+
+/* ── Fun touches (used sparingly) ─────────────────────── */
+.spark {
+  display: inline-flex; align-items: center; gap: 4px;
+  color: var(--rose);
+}
+.spark svg { filter: drop-shadow(0 0 5px color-mix(in oklch, var(--rose) 60%, transparent)); }
+
+.vibe {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px 4px 8px; border-radius: 999px;
+  background: var(--bg-1);
+  border: 1px solid var(--line-soft);
+  font-size: 12px; color: var(--fg-0);
+}
+.vibe .glow-dot {
+  width: 6px; height: 6px; border-radius: 999px; background: var(--rose);
+  box-shadow: 0 0 8px var(--rose), 0 0 0 3px color-mix(in oklch, var(--rose) 25%, transparent);
+}
+/* legacy class name compatibility */
+.vibe .glow { all: unset; width: 6px; height: 6px; border-radius: 999px; background: var(--rose);
+  box-shadow: 0 0 8px var(--rose), 0 0 0 3px color-mix(in oklch, var(--rose) 25%, transparent); }
+
+.today-dot {
+  width: 6px; height: 6px; border-radius: 999px; background: var(--rose);
+  box-shadow: 0 0 6px var(--rose), 0 0 0 2px color-mix(in oklch, var(--rose) 30%, transparent);
+  display: inline-block;
+}
+
+/* ── macOS window chrome ─────────────────────────────────── */
+.mac {
+  width: 1280px;
+  height: 830px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--bg-0);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.04) inset,
+    0 0 0 1px rgba(0,0,0,0.45),
+    0 30px 80px rgba(0,0,0,0.30);
+  display: flex; flex-direction: column;
+}
+.tempo--light .mac {
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.06),
+    0 30px 80px rgba(20,30,50,0.14);
+}
+
+.mac-titlebar {
+  height: 30px; min-height: 30px;
+  background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+  border-bottom: 1px solid var(--line-soft);
+  display: grid; grid-template-columns: 90px 1fr 90px; align-items: center;
+  padding: 0 10px;
+  position: relative; z-index: 2;
+}
+.tempo--light .mac-titlebar {
+  background: linear-gradient(180deg, #ecedf0, #e3e5e9);
+  border-bottom: 1px solid #d6d9de;
+}
+.mac-lights { display: flex; gap: 7px; padding-left: 4px; }
+.mac-lights .light {
+  width: 11px; height: 11px; border-radius: 999px;
+  box-shadow: 0 0 0 0.5px rgba(0,0,0,0.18) inset;
+}
+.mac-lights .red    { background: #ff5f57; }
+.mac-lights .yellow { background: #febc2e; }
+.mac-lights .green  { background: #28c840; }
+.mac-title {
+  text-align: center;
+  font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
+  font-size: 12px; font-weight: 500;
+  color: var(--fg-1);
+  letter-spacing: -0.01em;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.mac-title .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--accent, var(--run));
+  box-shadow: 0 0 6px color-mix(in oklch, var(--accent, var(--run)) 60%, transparent); }
+.mac-right { display: flex; justify-content: flex-end; gap: 6px; color: var(--fg-3); }
+
+/* Empty-state placeholders */
+.empty-card {
+  display: flex; align-items: center; justify-content: center;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(0,0,0,0.04) 0,
+    rgba(0,0,0,0.04) 1px,
+    transparent 1px,
+    transparent 10px
+  );
+  color: var(--fg-3); font-family: var(--font-mono); font-size: 11px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-md);
+}

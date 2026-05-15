@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    background: var(--bg-0);
+    color: var(--fg-0);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "ss03", "cv11", "tnum";
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.005em;
+    margin: 0;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-bg-1 border border-line-soft rounded-md p-4 relative;
+  }
+  .card h3 {
+    @apply text-[11px] uppercase tracking-[0.08em] text-fg-2 font-medium mb-2.5 m-0;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-bg-2 text-fg-1 text-[11px] border border-line-soft;
+  }
+  .gradient-pill {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-white text-[11px] font-medium;
+    background: var(--grad-glow);
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--rose) 25%, transparent), 0 4px 14px
+      color-mix(in oklch, var(--violet) 30%, transparent);
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+  .mono {
+    font-family: var(--font-mono);
+  }
+  .empty-card {
+    @apply flex items-center justify-center rounded-md border border-dashed border-line text-fg-3 font-mono text-[11px];
+    background-image: repeating-linear-gradient(
+      -45deg,
+      rgba(0, 0, 0, 0.04) 0,
+      rgba(0, 0, 0, 0.04) 1px,
+      transparent 1px,
+      transparent 10px
+    );
+  }
+  .today-dot {
+    @apply inline-block w-1.5 h-1.5 rounded-full;
+    background: var(--rose);
+    box-shadow: 0 0 6px var(--rose), 0 0 0 2px color-mix(in oklch, var(--rose) 30%, transparent);
+  }
+}

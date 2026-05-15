@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Garmin Glow Up — Developer Handoff</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;450;500;550;600;700&family=Geist+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root {
+      --rose:      oklch(0.70 0.26 5);
+      --cyan:      oklch(0.80 0.16 215);
+      --solar:     oklch(0.90 0.20 95);
+      --lime:      oklch(0.86 0.23 135);
+      --violet:    oklch(0.62 0.27 295);
+      --tangerine: oklch(0.72 0.21 50);
+
+      --bg-0: #0e0f12;
+      --bg-1: #16181c;
+      --bg-2: #1c1f24;
+      --bg-3: #24272d;
+      --line: #2a2d34;
+      --line-soft: #22252b;
+      --fg-0: #f1f2f4;
+      --fg-1: #b6b8bc;
+      --fg-2: #797c83;
+      --fg-3: #50535a;
+
+      --grad-glow: linear-gradient(95deg, var(--rose) 0%, var(--violet) 45%, var(--cyan) 100%);
+
+      --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+      --font-mono: "Geist Mono", ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg-0);
+      color: var(--fg-0);
+      font-family: var(--font-sans);
+      font-feature-settings: "ss01", "tnum";
+      letter-spacing: -0.005em;
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+
+    /* ── shell ── */
+    .shell {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 100vh;
+    }
+    aside {
+      background: var(--bg-1);
+      border-right: 1px solid var(--line-soft);
+      padding: 28px 22px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+    }
+    main {
+      max-width: 900px;
+      padding: 56px 64px 120px;
+    }
+
+    /* ── header ── */
+    .mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+    .mark .dot {
+      width: 22px; height: 22px;
+      border-radius: 999px;
+      background: var(--grad-glow);
+      box-shadow: 0 0 12px 0 oklch(0.70 0.26 5 / 0.35);
+    }
+    .kicker {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--fg-2);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 22px;
+    }
+
+    /* ── toc ── */
+    nav ol {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      counter-reset: tocnum -1;
+    }
+    nav li {
+      counter-increment: tocnum;
+      margin-bottom: 2px;
+    }
+    nav a {
+      display: grid;
+      grid-template-columns: 26px 1fr;
+      align-items: baseline;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      color: var(--fg-1);
+      text-decoration: none;
+      font-size: 13px;
+      transition: background .12s, color .12s;
+    }
+    nav a::before {
+      content: counter(tocnum, decimal-leading-zero);
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--fg-3);
+      letter-spacing: 0.04em;
+    }
+    nav a:hover { background: var(--bg-2); color: var(--fg-0); }
+    nav a.active { background: var(--bg-3); color: var(--fg-0); }
+    nav a.active::before { color: var(--lime); }
+
+    .lead {
+      margin-top: 30px;
+      padding: 14px;
+      background: var(--bg-2);
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--fg-1);
+      line-height: 1.5;
+    }
+    .lead b { color: var(--fg-0); }
+
+    /* ── markdown rendering ── */
+    article h1, article h2, article h3, article h4 {
+      letter-spacing: -0.02em;
+      font-weight: 550;
+      margin: 2em 0 .5em;
+      line-height: 1.2;
+    }
+    article h1 {
+      font-size: 36px;
+      margin-top: 0;
+      background: var(--grad-glow);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      display: inline-block;
+    }
+    article h2 {
+      font-size: 22px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line-soft);
+    }
+    article h3 { font-size: 16px; color: var(--fg-0); }
+    article h4 { font-size: 13px; color: var(--fg-1); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    article p, article li { color: var(--fg-1); font-size: 14.5px; }
+    article strong { color: var(--fg-0); font-weight: 550; }
+    article em { color: var(--fg-0); font-style: italic; }
+
+    article a { color: var(--cyan); text-decoration: none; border-bottom: 1px dotted var(--cyan); }
+    article a:hover { color: var(--rose); border-bottom-color: var(--rose); }
+
+    article code {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      background: var(--bg-2);
+      padding: 1.5px 5px;
+      border-radius: 3px;
+      color: var(--lime);
+    }
+    article pre {
+      background: var(--bg-1);
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      padding: 14px 16px;
+      overflow: auto;
+      font-size: 12.5px;
+      line-height: 1.55;
+    }
+    article pre code {
+      background: transparent;
+      padding: 0;
+      color: var(--fg-0);
+      font-size: 12.5px;
+    }
+
+    article ul, article ol { padding-left: 22px; }
+    article li { margin-bottom: 4px; }
+
+    article blockquote {
+      margin: 18px 0;
+      padding: 10px 14px;
+      border-left: 2px solid var(--rose);
+      background: color-mix(in oklch, var(--rose) 8%, var(--bg-1));
+      border-radius: 0 6px 6px 0;
+      color: var(--fg-1);
+    }
+    article blockquote p { margin: 4px 0; }
+
+    article table {
+      border-collapse: collapse;
+      margin: 16px 0;
+      width: 100%;
+      font-size: 12.5px;
+    }
+    article th, article td {
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    article th {
+      color: var(--fg-2);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 10.5px;
+      background: var(--bg-1);
+    }
+    article td { color: var(--fg-1); }
+    article td code { font-size: 12px; }
+
+    article hr {
+      border: none;
+      border-top: 1px solid var(--line-soft);
+      margin: 32px 0;
+    }
+
+    /* fileref bar */
+    .meta {
+      display: flex; align-items: center; gap: 10px;
+      margin-top: 6px; margin-bottom: 32px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--fg-3);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+    .meta .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 9px;
+      border: 1px solid var(--line-soft);
+      border-radius: 999px;
+      background: var(--bg-1);
+      color: var(--fg-1);
+    }
+    .meta .pill .sw {
+      width: 6px; height: 6px; border-radius: 999px; background: var(--lime);
+    }
+
+    /* loading shimmer */
+    .loading {
+      color: var(--fg-3);
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    /* footer */
+    .colophon {
+      margin-top: 80px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line-soft);
+      font-size: 12px;
+      color: var(--fg-3);
+      font-family: var(--font-mono);
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <div class="mark"><span class="dot"></span>Garmin Glow Up</div>
+      <div class="kicker">Developer handoff · v0.1</div>
+      <nav>
+        <ol id="toc"></ol>
+      </nav>
+      <div class="lead">
+        <b>How to use this:</b> read top-to-bottom for orientation. When handing this to Claude Code, zip the <b>entire project</b> — not just <code>handoff/</code>. The spec maps each screen to the existing <code>tempo/*.jsx</code> files line-by-line; without those, Claude Code only has half the picture.
+      </div>
+    </aside>
+
+    <main>
+      <article id="content"><div class="loading">loading spec…</div></article>
+      <div class="colophon">Tempo · open-source desktop client for Garmin Connect · spec generated for Claude Code</div>
+    </main>
+  </div>
+
+  <script>
+    const FILES = [
+      { id: "intro",      path: "handoff/00-README.md",        label: "Read me first" },
+      { id: "arch",       path: "handoff/01-architecture.md",  label: "Architecture" },
+      { id: "phases",     path: "handoff/02-phases.md",        label: "Delivery phases" },
+      { id: "backend",    path: "handoff/03-backend-sync.md",  label: "Sync service" },
+      { id: "db",         path: "handoff/04-database.md",      label: "Database" },
+      { id: "api",        path: "handoff/05-api-contract.md",  label: "API contract" },
+      { id: "desktop",    path: "handoff/06-desktop-shell.md", label: "Desktop shell" },
+      { id: "screens",    path: "handoff/07-screens.md",       label: "Screen wiring" },
+      { id: "tokens",     path: "handoff/08-design-tokens.md", label: "Design tokens" },
+      { id: "ship",       path: "handoff/09-build-ship.md",    label: "Build & ship" },
+    ];
+
+    // Build TOC
+    const toc = document.getElementById("toc");
+    for (const f of FILES) {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+      a.href = "#" + f.id;
+      a.textContent = f.label;
+      a.dataset.id = f.id;
+      li.appendChild(a);
+      toc.appendChild(li);
+    }
+
+    // Configure marked
+    marked.setOptions({ headerIds: false, mangle: false, breaks: false });
+
+    async function load() {
+      const content = document.getElementById("content");
+      content.innerHTML = "";
+      for (const f of FILES) {
+        const section = document.createElement("section");
+        section.id = f.id;
+        section.dataset.path = f.path;
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        const pill = document.createElement("span");
+        pill.className = "pill";
+        pill.innerHTML = `<span class="sw"></span>${f.path}`;
+        meta.appendChild(pill);
+
+        try {
+          const res = await fetch(f.path);
+          if (!res.ok) throw new Error(res.status);
+          const md = await res.text();
+          const wrap = document.createElement("div");
+          wrap.innerHTML = marked.parse(md);
+          section.appendChild(wrap.firstElementChild);  // h1 first
+          section.appendChild(meta);
+          while (wrap.firstChild) section.appendChild(wrap.firstChild);
+        } catch (e) {
+          section.innerHTML = `<h1>${f.label}</h1><p style="color:var(--rose)">Failed to load <code>${f.path}</code>: ${e.message}</p>`;
+        }
+
+        content.appendChild(section);
+      }
+
+      // active toc highlight via IntersectionObserver
+      const links = document.querySelectorAll("nav a");
+      const byId = Object.fromEntries([...links].map(a => [a.dataset.id, a]));
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(en => {
+          if (en.isIntersecting) {
+            links.forEach(a => a.classList.remove("active"));
+            const a = byId[en.target.id];
+            if (a) a.classList.add("active");
+          }
+        });
+      }, { rootMargin: "-40% 0px -55% 0px" });
+      document.querySelectorAll("section[id]").forEach(s => io.observe(s));
+    }
+
+    load();
+  </script>
+</body>
+</html>
