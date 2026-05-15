@@ -370,6 +370,7 @@ def get_dashboard(_token: TokenDep, db: DbDep):
         db.query(RacePrediction.date)
         .filter(RacePrediction.date <= today)
         .order_by(RacePrediction.date.desc())
+        .limit(1)
         .scalar()
     )
     today_preds = {
@@ -381,6 +382,7 @@ def get_dashboard(_token: TokenDep, db: DbDep):
         db.query(RacePrediction.date)
         .filter(RacePrediction.date <= ref_date)
         .order_by(RacePrediction.date.desc())
+        .limit(1)
         .scalar()
     )
     ago30_preds = {
