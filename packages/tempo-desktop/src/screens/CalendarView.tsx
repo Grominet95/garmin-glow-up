@@ -258,16 +258,17 @@ function Heatmap({ cells, rangeStart, rangeEnd, activeFilters }: HeatmapProps) {
 
 // ─── Monthly Bar Chart ───────────────────────────────────────────────────────
 
+const RUNNING_SPORTS = new Set(["run", "trail"]);
+
 interface MonthlyBarChartProps {
   monthly: MonthBucket[];
-  activeFilters: Set<string>;
 }
 
-function MonthlyBarChart({ monthly, activeFilters }: MonthlyBarChartProps) {
+function MonthlyBarChart({ monthly }: MonthlyBarChartProps) {
   const filtered = monthly.map((m) => {
     const bySport: Record<string, number> = {};
     for (const [sport, km] of Object.entries(m.bySport)) {
-      if (activeFilters.has(sport)) bySport[sport] = km;
+      if (RUNNING_SPORTS.has(sport)) bySport[sport] = km;
     }
     return { ...m, bySport, totalKm: Object.values(bySport).reduce((a, b) => a + b, 0) };
   });
@@ -605,7 +606,7 @@ export function CalendarView() {
 
               {/* Monthly bar chart card */}
               <div className="card p-4">
-                <MonthlyBarChart monthly={data.monthly} activeFilters={activeFilters} />
+                <MonthlyBarChart monthly={data.monthly} />
               </div>
             </>
           )}
