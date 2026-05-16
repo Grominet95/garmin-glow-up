@@ -88,15 +88,31 @@ def _pull_day(client: GarminClient, db: Session, d: date, date_str: str) -> None
     try:
         bb_list = client.body_battery(date_str, date_str)
         if bb_list:
-            # Each entry: {"date": ..., "charged": int, "drained": int, "bodyBatteryStatList": [...]}
+            # Response: {"date":…, "charged":int, "drained":int,
+            #   "bodyBatteryValuesArray": [[timestamp_ms, level], …],
+            #   "bodyBatteryValueDescriptorDTOList": [{"bodyBatteryValueDescriptorIndex":0,"bodyBatteryValueDescriptorKey":"timestamp"},
+            #                                         {"bodyBatteryValueDescriptorIndex":1,"bodyBatteryValueDescriptorKey":"bodyBatteryLevel"}]}
             entry = bb_list[0] if isinstance(bb_list, list) else bb_list
-            stat_list = entry.get("bodyBatteryStatList") or []
-            values = [s.get("bodyBatteryLevel") for s in stat_list if s.get("bodyBatteryLevel") is not None]
+            values_array = entry.get("bodyBatteryValuesArray") or []
+            # Determine which column holds the level (default 1)
+            level_idx = 1
+            for d in (entry.get("bodyBatteryValueDescriptorDTOList") or []):
+                if d.get("bodyBatteryValueDescriptorKey") == "bodyBatteryLevel":
+                    level_idx = d.get("bodyBatteryValueDescriptorIndex", 1)
+                    break
+            values = [
+                row[level_idx]
+                for row in values_array
+                if len(row) > level_idx and row[level_idx] is not None and row[level_idx] >= 0
+            ]
             if values:
-                metric.body_battery_high = max(values)
+                metric.body_battery_high = values[-1]  # most recent reading = current level
                 metric.body_battery_low = min(values)
-            elif entry.get("charged") is not None:
-                metric.body_battery_high = entry.get("charged")
+                metric.body_battery_charged = entry.get("charged")  # overnight recovery delta
+            else:
+                # No readings: clear stale value so dashboard falls back to previous day
+                metric.body_battery_high = None
+                metric.body_battery_charged = entry.get("charged") or metric.body_battery_charged
     except Exception as e:
         logger.debug("Body battery fetch error: %s", e)
 

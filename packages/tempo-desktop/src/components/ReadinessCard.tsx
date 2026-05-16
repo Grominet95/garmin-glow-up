@@ -19,21 +19,18 @@ interface Props {
   data?: ReadinessData | null;
 }
 
-const MOCK_DATA: ReadinessData = {
-  score: 84,
-  delta7d: 6,
-  tone: "green",
-  factors: [
-    { name: "Sleep", value: "7:42 · 88%", pct: 88, color: "var(--run)" },
-    { name: "HRV", value: "+8 ms", pct: 92, color: "var(--run)" },
-    { name: "Acute load", value: "balanced", pct: 74, color: "var(--bike)" },
-    { name: "Recovery", value: "0:00 left", pct: 96, color: "var(--run)" },
-    { name: "Stress 24h", value: "low · 22", pct: 78, color: "var(--swim)" },
-  ],
-};
-
 export function ReadinessCard({ switcher, data }: Props) {
-  const d = data ?? MOCK_DATA;
+  if (!data) {
+    return (
+      <div className="card">
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 10, gap: 10 }}>
+          {switcher ?? <h3 style={{ margin: 0 }}>Readiness</h3>}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--fg-3)" }}>No readiness data</div>
+      </div>
+    );
+  }
+  const d = data;
   const toneColor =
     d.tone === "green" ? "var(--run)" : d.tone === "yellow" ? "var(--tangerine)" : "var(--z5)";
 

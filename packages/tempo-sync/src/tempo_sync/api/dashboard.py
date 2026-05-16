@@ -251,12 +251,15 @@ def get_dashboard(_token: TokenDep, db: DbDep):
     )
     body_battery = None
     if bb_metric and bb_metric.body_battery_high is not None:
-        bb_val = bb_metric.body_battery_high
+        bb_val = bb_metric.body_battery_high  # last reading from stat list = current level
+        charged = bb_metric.body_battery_charged or 0
+        # from_val = 0 when charged unknown (old rows) so UI hides "from X" / overnight text
+        from_val = max(0, bb_val - charged) if charged else 0
         label = "Charged" if bb_val >= 75 else "Charging" if bb_val >= 50 else "Low" if bb_val >= 25 else "Drained"
         body_battery = {
             "current": bb_val,
             "label": label,
-            "from": bb_metric.body_battery_low or 0,
+            "from": from_val,
             "drainsToByNoon": max(0, bb_val - 20),
         }
 
@@ -314,43 +317,50 @@ def get_dashboard(_token: TokenDep, db: DbDep):
     sessions = sum(1 for w in week if w.sport)
 
     # ── Readiness (from DailyMetric) ─────────────────────────────
+    readiness_metric = (
+        today_metric if (today_metric and today_metric.readiness_score is not None)
+        else db.query(DailyMetric)
+        .filter(DailyMetric.date <= today, DailyMetric.readiness_score.isnot(None))
+        .order_by(DailyMetric.date.desc())
+        .first()
+    )
     readiness_out: ReadinessOut | None = None
-    if today_metric and today_metric.readiness_score is not None:
-        level = (today_metric.readiness_level or "").upper()
-        tone = "green" if level == "HIGH" else "yellow" if level == "MODERATE" else "red"
+    if readiness_metric and readiness_metric.readiness_score is not None:
+        r_level = (readiness_metric.readiness_level or "").upper()
+        r_tone = "green" if r_level == "HIGH" else "yellow" if r_level == "MODERATE" else "red"
         readiness_out = ReadinessOut(
-            score=today_metric.readiness_score,
+            score=readiness_metric.readiness_score,
             delta7d=0,
-            tone=tone,  # type: ignore[arg-type]
+            tone=r_tone,  # type: ignore[arg-type]
             factors=[
                 ReadinessFactor(
                     name="Sleep",
-                    value=str(today_metric.sleep_score or "—"),
-                    pct=today_metric.readiness_sleep_pct or 0,
+                    value=str(readiness_metric.sleep_score or "—"),
+                    pct=readiness_metric.readiness_sleep_pct or 0,
                     color="var(--run)",
                 ),
                 ReadinessFactor(
                     name="HRV",
-                    value=f"{today_metric.hrv_overnight} ms" if today_metric.hrv_overnight else "—",
-                    pct=today_metric.readiness_hrv_pct or 0,
+                    value=f"{readiness_metric.hrv_overnight} ms" if readiness_metric.hrv_overnight else "—",
+                    pct=readiness_metric.readiness_hrv_pct or 0,
                     color="var(--run)",
                 ),
                 ReadinessFactor(
                     name="Acute load",
                     value="balanced",
-                    pct=today_metric.readiness_load_pct or 0,
+                    pct=readiness_metric.readiness_load_pct or 0,
                     color="var(--bike)",
                 ),
                 ReadinessFactor(
                     name="Recovery",
                     value="—",
-                    pct=today_metric.readiness_recovery_pct or 0,
+                    pct=readiness_metric.readiness_recovery_pct or 0,
                     color="var(--run)",
                 ),
                 ReadinessFactor(
                     name="Stress 24h",
-                    value=str(today_metric.stress_avg or "—"),
-                    pct=today_metric.readiness_stress_pct or 0,
+                    value=str(readiness_metric.stress_avg or "—"),
+                    pct=readiness_metric.readiness_stress_pct or 0,
                     color="var(--swim)",
                 ),
             ],
