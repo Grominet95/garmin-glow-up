@@ -90,8 +90,10 @@ def _pull_day(client: GarminClient, db: Session, d: date, date_str: str) -> None
         if bb_list:
             # Response: {"date":…, "charged":int, "drained":int,
             #   "bodyBatteryValuesArray": [[timestamp_ms, level], …],
-            #   "bodyBatteryValueDescriptorDTOList": [{"bodyBatteryValueDescriptorIndex":0,"bodyBatteryValueDescriptorKey":"timestamp"},
-            #                                         {"bodyBatteryValueDescriptorIndex":1,"bodyBatteryValueDescriptorKey":"bodyBatteryLevel"}]}
+            #   "bodyBatteryValueDescriptorDTOList": [
+            #     {"bodyBatteryValueDescriptorIndex":0,"bodyBatteryValueDescriptorKey":"timestamp"},
+            #     {"bodyBatteryValueDescriptorIndex":1,"bodyBatteryValueDescriptorKey":"bodyBatteryLevel"}
+            #   ]}
             entry = bb_list[0] if isinstance(bb_list, list) else bb_list
             values_array = entry.get("bodyBatteryValuesArray") or []
             # Determine which column holds the level (default 1)
@@ -115,6 +117,39 @@ def _pull_day(client: GarminClient, db: Session, d: date, date_str: str) -> None
                 metric.body_battery_charged = entry.get("charged") or metric.body_battery_charged
     except Exception as e:
         logger.debug("Body battery fetch error: %s", e)
+
+    try:
+        summary = client.user_summary(date_str)
+        if summary:
+            rhr_val = summary.get("restingHeartRate")
+            if rhr_val:
+                metric.resting_hr = int(rhr_val)
+            stress_val = summary.get("averageStressLevel")
+            if stress_val and int(stress_val) > 0:
+                metric.stress_avg = int(stress_val)
+            # Stress breakdown (seconds per category)
+            def _s(key: str) -> int | None:
+                v = summary.get(key)
+                return int(v) if v is not None and int(v) >= 0 else None
+            metric.stress_rest_s = _s("restStressDurationSeconds")
+            metric.stress_low_s = _s("lowStressDurationSeconds")
+            metric.stress_med_s = _s("mediumStressDurationSeconds")
+            metric.stress_high_s = _s("highStressDurationSeconds")
+            updated = True
+    except Exception as e:
+        logger.debug("User summary fetch error: %s", e)
+
+    try:
+        spo2 = client.spo2_data(date_str)
+        if spo2:
+            avg = (spo2.get("spO2SleepSummary") or {}).get("averageSpO2")
+            if avg is None:
+                avg = spo2.get("averageSpO2")
+            if avg is not None:
+                metric.spo2_avg = round(float(avg))
+            updated = True
+    except Exception as e:
+        logger.debug("SpO2 fetch error: %s", e)
 
     if updated or db.get(DailyMetric, d) is None:
         db.merge(metric)

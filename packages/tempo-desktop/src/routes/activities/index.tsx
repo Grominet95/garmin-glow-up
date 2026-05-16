@@ -116,7 +116,7 @@ function ActivitiesList() {
     for (const act of data.items) {
       const key = getMondayOf(act.startTimeLocal);
       if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(act);
+      map.get(key)?.push(act);
     }
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
   })();

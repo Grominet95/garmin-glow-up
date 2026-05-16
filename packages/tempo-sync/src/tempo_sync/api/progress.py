@@ -4,17 +4,58 @@ from datetime import date, timedelta
 
 from fastapi import APIRouter
 from pydantic import BaseModel
+from sqlalchemy import func
 
 from tempo_sync.api.deps import DbDep, TokenDep
-from tempo_sync.db.models import Badge, CourseBest, PersonalRecord, Vo2maxHistory
+from tempo_sync.db.models import Badge, CourseBest, PersonalRecord, RacePrediction, Vo2maxHistory
 
 router = APIRouter()
+
+# Garmin prediction distance keys → (internal key, display label)
+_PRED_MAP = {
+    "time5K": ("5k", "5 km"),
+    "time10K": ("10k", "10 km"),
+    "timeHalfMarathon": ("half", "Half"),
+    "timeMarathon": ("marathon", "Marathon"),
+    "time1Mile": ("1mi", "1 mile"),
+}
+
+# Rough value-range → distance mapping for PRs with metric='unknown'
+def _infer_metric(value_s: float) -> str | None:
+    if 200 <= value_s < 420:
+        return "1mi"
+    if 900 <= value_s < 1600:
+        return "5k"
+    if 2000 <= value_s < 3600:
+        return "10k"
+    if 4500 <= value_s < 9500:
+        return "half"
+    if 9500 <= value_s < 22000:
+        return "marathon"
+    return None
+
+
+def _fitness_age(vo2max: float) -> int:
+    if vo2max >= 62:
+        return 20
+    if vo2max >= 58:
+        return 24
+    if vo2max >= 54:
+        return 28
+    if vo2max >= 50:
+        return 32
+    if vo2max >= 46:
+        return 36
+    if vo2max >= 42:
+        return 40
+    return 45
 
 
 class Vo2maxOut(BaseModel):
     months: list[str]
     values: list[float]
     deltaLast90d: float
+    fitnessAge: int | None = None
 
 
 class RaceOut(BaseModel):
@@ -22,6 +63,18 @@ class RaceOut(BaseModel):
     targetDisplay: str
     prDisplay: str
     prDate: str
+    featured: bool = False
+
+
+class PredictionOut(BaseModel):
+    distance: str
+    distLabel: str
+    predictedDisplay: str
+    predictedSecs: int
+    prDisplay: str
+    prSecs: int | None
+    prDate: str
+    deltaPct: float | None
     featured: bool = False
 
 
@@ -50,6 +103,7 @@ class HighlightOut(BaseModel):
 class ProgressResponse(BaseModel):
     vo2max: Vo2maxOut
     races: list[RaceOut]
+    predictions: list[PredictionOut]
     courses: list[CourseOut]
     badges: list[BadgeOut]
     highlights: list[HighlightOut]
@@ -68,7 +122,7 @@ def _fmt_time(seconds: int) -> str:
 def get_progress(_token: TokenDep, db: DbDep):
     today = date.today()
 
-    # VO2max history (last 24 months)
+    # ── VO2max ──────────────────────────────────────────────────────────────────
     vo2_rows = (
         db.query(Vo2maxHistory)
         .filter(Vo2maxHistory.sport == "run")
@@ -83,25 +137,71 @@ def get_progress(_token: TokenDep, db: DbDep):
         old = next((r.value for r in vo2_rows if r.date <= cutoff), vo2_values[0])
         delta = round(vo2_values[-1] - old, 1)
 
-    # PRs
-    pr_rows = db.query(PersonalRecord).order_by(PersonalRecord.achieved_at.desc()).all()
+    latest_vo2 = vo2_values[-1] if vo2_values else None
+    fit_age = _fitness_age(latest_vo2) if latest_vo2 is not None else None
+
+    # ── PR lookup (deduplicated by inferred distance, best time wins) ─────────
+    pr_by_dist: dict[str, tuple[float, str | None]] = {}
+    for pr in db.query(PersonalRecord).filter(PersonalRecord.sport == "run").all():
+        dist = pr.metric if pr.metric != "unknown" else _infer_metric(pr.value)
+        if dist is None:
+            continue
+        prev = pr_by_dist.get(dist)
+        if prev is None or pr.value < prev[0]:
+            date_str = pr.achieved_at.isoformat() if pr.achieved_at else None
+            pr_by_dist[dist] = (pr.value, date_str)
+
+    # ── Race PRs (legacy section, kept for backwards compat) ─────────────────
     distance_order = ["5k", "10k", "half", "marathon", "1mi", "50k"]
-    pr_map: dict[str, PersonalRecord] = {}
-    for pr in pr_rows:
-        if pr.metric not in pr_map:
-            pr_map[pr.metric] = pr
     races = [
         RaceOut(
             distance=d,
             targetDisplay="--",
-            prDisplay=pr_map[d].display_value or _fmt_time(int(pr_map[d].value)) if d in pr_map else "--",
-            prDate=pr_map[d].achieved_at.isoformat() if d in pr_map and pr_map[d].achieved_at else "--",
+            prDisplay=_fmt_time(int(pr_by_dist[d][0])) if d in pr_by_dist else "--",
+            prDate=pr_by_dist[d][1] or "--" if d in pr_by_dist else "--",
             featured=d in ("5k", "marathon"),
         )
         for d in distance_order
     ]
 
-    # Courses
+    # ── Race Predictions ──────────────────────────────────────────────────────
+    latest_pred_date = db.query(func.max(RacePrediction.date)).scalar()
+    pred_rows = (
+        db.query(RacePrediction).filter(RacePrediction.date == latest_pred_date).all()
+        if latest_pred_date
+        else []
+    )
+
+    pred_display_order = ["time1Mile", "time5K", "time10K", "timeHalfMarathon", "timeMarathon"]
+    pred_map = {r.distance: r for r in pred_rows}
+    predictions: list[PredictionOut] = []
+    for garmin_key in pred_display_order:
+        if garmin_key not in _PRED_MAP:
+            continue
+        metric_key, dist_label = _PRED_MAP[garmin_key]
+        row = pred_map.get(garmin_key)
+        if row is None:
+            continue
+        pr_info = pr_by_dist.get(metric_key)
+        pr_secs = int(pr_info[0]) if pr_info else None
+        pr_date = pr_info[1] or "--" if pr_info else "--"
+        delta_pct = (
+            round((row.predicted_time_s - pr_secs) / pr_secs * 100, 1)
+            if pr_secs else None
+        )
+        predictions.append(PredictionOut(
+            distance=metric_key,
+            distLabel=dist_label,
+            predictedDisplay=_fmt_time(row.predicted_time_s),
+            predictedSecs=row.predicted_time_s,
+            prDisplay=_fmt_time(pr_secs) if pr_secs else "--",
+            prSecs=pr_secs,
+            prDate=pr_date,
+            deltaPct=delta_pct,
+            featured=metric_key in ("5k", "marathon"),
+        ))
+
+    # ── Courses ───────────────────────────────────────────────────────────────
     course_rows = db.query(CourseBest).order_by(CourseBest.achieved_at.desc()).all()
     courses = [
         CourseOut(
@@ -114,7 +214,7 @@ def get_progress(_token: TokenDep, db: DbDep):
         for c in course_rows[:10]
     ]
 
-    # Badges
+    # ── Badges ────────────────────────────────────────────────────────────────
     badge_rows = db.query(Badge).all()
     badges = [
         BadgeOut(
@@ -127,20 +227,34 @@ def get_progress(_token: TokenDep, db: DbDep):
         for b in badge_rows
     ]
 
-    # Highlights
+    # ── Highlights ────────────────────────────────────────────────────────────
     highlights: list[HighlightOut] = []
     week_ago = today - timedelta(days=7)
-    for pr in pr_rows:
+    pr_rows_recent = db.query(PersonalRecord).filter(
+        PersonalRecord.sport == "run"
+    ).order_by(PersonalRecord.achieved_at.desc()).all()
+    for pr in pr_rows_recent:
         if pr.achieved_at and pr.achieved_at >= week_ago:
+            dist = pr.metric if pr.metric != "unknown" else _infer_metric(pr.value)
+            label = dist or pr.metric
             highlights.append(HighlightOut(
                 kind="pr",
-                body=f"New PR: {pr.metric} — {pr.display_value or ''}",
+                body=f"New PR: {label} — {pr.display_value or ''}",
                 dateLocal=pr.achieved_at.isoformat(),
             ))
 
+    # Trending VO2max
+    if delta > 0 and len(vo2_values) >= 2:
+        highlights.append(HighlightOut(
+            kind="trend",
+            body=f"Trending up · +{delta} in 90d",
+            dateLocal=today.isoformat(),
+        ))
+
     return ProgressResponse(
-        vo2max=Vo2maxOut(months=vo2_months, values=vo2_values, deltaLast90d=delta),
+        vo2max=Vo2maxOut(months=vo2_months, values=vo2_values, deltaLast90d=delta, fitnessAge=fit_age),
         races=races,
+        predictions=predictions,
         courses=courses,
         badges=badges,
         highlights=highlights,

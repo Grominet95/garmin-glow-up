@@ -233,19 +233,78 @@ def get_activity(_token: TokenDep, db: DbDep, activity_id: int):
 
     # Splits / laps
     laps = db.query(ActivityLap).filter(ActivityLap.activity_id == activity_id).order_by(ActivityLap.idx).all()
-    splits = [
-        SplitOut(
+
+    # Build cumulative lap time windows so we can compute missing pace/cadence from streams
+    _t = 0
+    lap_windows: list[tuple[int, int]] = []
+    for lap in laps:
+        dur = int(lap.duration_s or 0)
+        lap_windows.append((_t, _t + dur))
+        _t += dur
+
+    def _stream_avg(attr: str, t_start: int, t_end: int) -> float | None:
+        vals = [
+            getattr(r, attr)
+            for r in stream_rows
+            if t_start <= r.t_offset_s < t_end and getattr(r, attr) is not None
+        ]
+        return sum(vals) / len(vals) if vals else None
+
+    splits = []
+    for lap, (t0, t1) in zip(laps, lap_windows):
+        pace = lap.avg_pace_s_per_km
+        if not pace:
+            avg_spd = _stream_avg("speed_mps", t0, t1)
+            if avg_spd and avg_spd > 0:
+                pace = 1000.0 / avg_spd
+        cad = lap.avg_cadence
+        if not cad:
+            raw = _stream_avg("cadence", t0, t1)
+            if raw:
+                cad = round(raw * 2)  # strides/min → steps/min
+        splits.append(SplitOut(
             k=lap.label or str(lap.idx + 1),
             distanceM=lap.distance_m or 0,
-            pace=lap.avg_pace_s_per_km or 0,
-            paceDisplay=_fmt_pace(lap.avg_pace_s_per_km) if lap.avg_pace_s_per_km else "--",
+            pace=pace or 0,
+            paceDisplay=_fmt_pace(pace) if pace else "--",
             hr=lap.avg_hr or 0,
-            cad=lap.avg_cadence or 0,
+            cad=cad or 0,
             elevDelta=(lap.elev_gain_m or 0) - (lap.elev_loss_m or 0),
             zone=lap.hr_zone or 2,
-        )
-        for lap in laps
-    ]
+        ))
+
+    # Dynamics aggregation from stream (vertical_osc_cm stored in mm → divide by 10 for cm)
+    dynamics_out = None
+    if act.has_dynamics:
+        vo_vals = [r.vertical_osc_cm for r in stream_rows if r.vertical_osc_cm is not None]
+        gct_vals = [r.ground_contact_ms for r in stream_rows if r.ground_contact_ms is not None]
+        sl_vals = [r.stride_length_m for r in stream_rows if r.stride_length_m is not None]
+        bal_vals = [r.balance_pct for r in stream_rows if r.balance_pct is not None]
+        if vo_vals:
+            avg_vo_cm = sum(vo_vals) / len(vo_vals) / 10
+            avg_gct = sum(gct_vals) / len(gct_vals) if gct_vals else 0.0
+            avg_bal = sum(bal_vals) / len(bal_vals) if bal_vals else 50.0
+
+            # Prefer pod stride length; fall back to speed/cadence derivation
+            if sl_vals:
+                avg_sl = sum(sl_vals) / len(sl_vals)
+            else:
+                derived = [
+                    r.speed_mps * 60.0 / r.cadence
+                    for r in stream_rows
+                    if r.speed_mps and r.speed_mps > 0 and r.cadence and r.cadence > 0
+                ]
+                avg_sl = sum(derived) / len(derived) if derived else 0.0
+
+            vr = (avg_vo_cm / (avg_sl * 100)) * 100 if avg_sl > 0 else 0.0
+            dynamics_out = DynamicsOut(
+                verticalOscCm=round(avg_vo_cm, 1),
+                groundContactMs=round(avg_gct),
+                strideLengthM=round(avg_sl, 2),
+                verticalRatioPct=round(vr, 1),
+                leftPct=round(avg_bal, 1),
+                rightPct=round(100 - avg_bal, 1),
+            )
 
     # Zones
     zone_rows = db.query(ActivityZone).filter(
@@ -267,12 +326,14 @@ def get_activity(_token: TokenDep, db: DbDep, activity_id: int):
     dur = act.duration_s or 0
     h, m, s = dur // 3600, (dur % 3600) // 60, dur % 60
     dur_display = f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+    cad_vals_all = [r.cadence for r in stream_rows if r.cadence is not None]
+    avg_cad_spm = round(sum(cad_vals_all) / len(cad_vals_all) * 2) if cad_vals_all else None
     hero = [
         StatOut(label="Distance", value=f"{dist_km:.2f}", unit="km", tone="lead"),
         StatOut(label="Time", value=dur_display, unit="", tone="lead"),
         StatOut(label="Pace", value=_fmt_pace(act.avg_pace_s_per_km) if act.avg_pace_s_per_km else "--", unit="/km"),
         StatOut(label="HR Avg", value=str(act.avg_hr or "--"), unit="bpm"),
-        StatOut(label="Cadence", value=str(act.avg_cadence or "--"), unit="spm"),
+        StatOut(label="Cadence", value=str(avg_cad_spm or "--"), unit="spm"),
         StatOut(label="Elev +", value=str(int(act.elevation_gain_m or 0)), unit="m"),
         StatOut(label="TSS", value=str(int(act.tss or 0)), unit=""),
         StatOut(label="Calories", value=str(act.calories_kcal or "--"), unit="kcal", tone="dim"),
@@ -305,7 +366,7 @@ def get_activity(_token: TokenDep, db: DbDep, activity_id: int):
         splits=splits,
         zones=zones,
         hrSummary=HrSummary(avg=act.avg_hr or 0, max=act.max_hr or 0, hrrPct=0),
-        dynamics=None,
+        dynamics=dynamics_out,
         trainingEffect=TrainingEffect(
             headline=act.training_effect_label or "Base",
             sub="",
