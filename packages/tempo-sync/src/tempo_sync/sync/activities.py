@@ -67,7 +67,7 @@ def _map_sport(garmin_type: str | None) -> str:
     return _SPORT_MAP.get(garmin_type.lower(), "other")
 
 
-def pull_recent(client: GarminClient, db: Session, days: int = 30, force: bool = False) -> int:
+def pull_recent(client: GarminClient, db: Session, days: int = 365, force: bool = False) -> int:
     settings = get_settings()
     cutoff = (datetime.now(tz=UTC) - timedelta(days=days)).replace(tzinfo=None)
     pulled = 0
@@ -79,6 +79,7 @@ def pull_recent(client: GarminClient, db: Session, days: int = 30, force: bool =
         if not raw_acts:
             break
 
+        reached_cutoff = False
         for raw in raw_acts:
             act_time_str = raw.get("startTimeGMT") or raw.get("beginTimestamp")
             if not act_time_str:
@@ -89,7 +90,8 @@ def pull_recent(client: GarminClient, db: Session, days: int = 30, force: bool =
                 continue
 
             if act_time < cutoff:
-                return pulled
+                reached_cutoff = True
+                break
 
             act_id = raw.get("activityId")
             if not act_id:
@@ -97,7 +99,7 @@ def pull_recent(client: GarminClient, db: Session, days: int = 30, force: bool =
 
             existing = db.get(Activity, act_id)
             if existing and not force:
-                continue
+                continue  # skip known, but keep paginating to find older gaps
 
             sport = _map_sport(raw.get("activityType", {}).get("typeKey"))
             distance = raw.get("distance")
@@ -162,6 +164,8 @@ def pull_recent(client: GarminClient, db: Session, days: int = 30, force: bool =
             db.flush()
             pulled += 1
 
+        if reached_cutoff:
+            break
         start += limit
 
     return pulled
@@ -220,8 +224,17 @@ def _ingest_fit(act: Activity, blob: bytes, db: Session) -> None:
     # Laps
     athlete_max_hr = 190
     for i, lap in enumerate(parsed.laps):
+        # Speed: prefer direct field, fall back to distance/elapsed
         speed = lap.get("avg_speed") or lap.get("enhanced_avg_speed")
+        if not speed:
+            dist = lap.get("total_distance")
+            elapsed = lap.get("total_elapsed_time") or lap.get("total_timer_time")
+            if dist and elapsed and elapsed > 0:
+                speed = dist / elapsed
         avg_pace = (1000.0 / speed) if speed and speed > 0 else None
+        # Cadence: running laps use avg_running_cadence (strides/min) → steps/min ×2
+        raw_cad = lap.get("avg_running_cadence") or lap.get("avg_cadence")
+        avg_cadence = round(raw_cad * 2) if raw_cad else None
         avg_hr = lap.get("avg_heart_rate")
         zone = derive_hr_zone(avg_hr, athlete_max_hr) if avg_hr else None
         db.add(ActivityLap(
@@ -232,7 +245,7 @@ def _ingest_fit(act: Activity, blob: bytes, db: Session) -> None:
             distance_m=lap.get("total_distance"),
             avg_hr=avg_hr,
             avg_pace_s_per_km=avg_pace,
-            avg_cadence=lap.get("avg_cadence"),
+            avg_cadence=avg_cadence,
             avg_power_w=lap.get("avg_power"),
             elev_gain_m=lap.get("total_ascent"),
             elev_loss_m=lap.get("total_descent"),
