@@ -21,13 +21,23 @@ function pathD(data: number[], w: number, h: number, padTop = 8, padBottom = 8):
   const max = Math.max(...data);
   const span = max - min || 1;
   const innerH = h - padTop - padBottom;
-  return data
-    .map((v, i) => {
-      const x = (i / (data.length - 1)) * w;
-      const y = padTop + innerH - ((v - min) / span) * innerH;
-      return `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
-    })
-    .join(" ");
+  const pts = data.map((v, i) => ({
+    x: (i / (data.length - 1)) * w,
+    y: padTop + innerH - ((v - min) / span) * innerH,
+  }));
+  let d = `M${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C${cp1x.toFixed(1)} ${cp1y.toFixed(1)} ${cp2x.toFixed(1)} ${cp2y.toFixed(1)} ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+  }
+  return d;
 }
 
 function fmtSleep(secs: number): string {
@@ -204,6 +214,13 @@ export function Dashboard() {
     racePredictor,
   } = data;
 
+  const tsbMin = Math.min(...form28d.tsb);
+  const tsbMax = Math.max(...form28d.tsb);
+  const tsbZeroY =
+    tsbMin < 0 && tsbMax > 0
+      ? 4 + 52 * (1 - (0 - tsbMin) / (tsbMax - tsbMin))
+      : null;
+
   const todayDisplay = new Date(`${data.todayLocal}T12:00:00`).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -229,7 +246,7 @@ export function Dashboard() {
           {/* ── Row 1: Status · Body Battery · Sleep ── */}
           <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr", gap: 14 }}>
             {/* STATUS */}
-            <div className="card" style={{ padding: "18px 20px", overflow: "hidden" }}>
+            <div className="card" style={{ padding: "18px 20px 76px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
               <div
                 style={{
                   fontSize: 11,
@@ -291,59 +308,120 @@ export function Dashboard() {
               </div>
 
               {/* CTL / ATL / TSB sparklines */}
-              <svg
-                aria-hidden="true"
-                width="100%"
-                height="88"
-                viewBox="0 0 540 88"
-                preserveAspectRatio="none"
-                style={{ display: "block" }}
-              >
-                {/* Grid lines */}
-                {[0.25, 0.5, 0.75].map((p) => (
-                  <line
-                    key={p}
-                    x1="0"
-                    y1={p * 88}
-                    x2="540"
-                    y2={p * 88}
-                    stroke="var(--line-soft)"
-                    strokeDasharray="2 3"
+              <div style={{ marginTop: "auto", paddingTop: 12 }}>
+                <div style={{ display: "flex", gap: 16, marginBottom: 4 }}>
+                  {(
+                    [
+                      { label: "Fitness", color: "var(--run)", dashed: false },
+                      { label: "Fatigue", color: "var(--bike)", dashed: true },
+                      { label: "Form", color: "var(--swim)", dashed: false },
+                    ] as const
+                  ).map(({ label, color, dashed }) => (
+                    <span
+                      key={label}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                        fontSize: 10,
+                        color: "var(--fg-2)",
+                        fontFamily: "var(--font-mono)",
+                      }}
+                    >
+                      <svg
+                        width="18"
+                        height="8"
+                        aria-hidden="true"
+                        style={{ display: "block", flexShrink: 0 }}
+                      >
+                        <line
+                          x1="0"
+                          y1="4"
+                          x2="18"
+                          y2="4"
+                          stroke={color}
+                          strokeWidth="1.5"
+                          strokeDasharray={dashed ? "3 2" : undefined}
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      {label}
+                    </span>
+                  ))}
+                </div>
+                <svg
+                  aria-hidden="true"
+                  width="100%"
+                  height="80"
+                  viewBox="0 0 540 80"
+                  preserveAspectRatio="none"
+                  style={{ display: "block" }}
+                >
+                  {[0.33, 0.67].map((p) => (
+                    <line
+                      key={p}
+                      x1="0"
+                      y1={p * 80}
+                      x2="540"
+                      y2={p * 80}
+                      stroke="var(--line-soft)"
+                      strokeDasharray="2 3"
+                      opacity="0.4"
+                    />
+                  ))}
+                  {tsbZeroY !== null && (
+                    <line
+                      x1="0"
+                      y1={tsbZeroY}
+                      x2="540"
+                      y2={tsbZeroY}
+                      stroke="var(--swim)"
+                      strokeWidth="0.8"
+                      strokeDasharray="4 4"
+                      opacity="0.4"
+                    />
+                  )}
+                  <path
+                    d={pathD(form28d.tsb, 540, 80, 4, 4)}
+                    stroke="var(--swim)"
+                    strokeWidth="1.4"
+                    fill="none"
                   />
-                ))}
-                {/* TSB (behind) */}
-                <path
-                  d={pathD(form28d.tsb, 540, 88, 18, 8)}
-                  stroke="var(--swim)"
-                  strokeWidth="1.4"
-                  fill="none"
-                />
-                {/* ATL */}
-                <path
-                  d={pathD(form28d.atl, 540, 88, 8, 20)}
-                  stroke="var(--bike)"
-                  strokeWidth="1.6"
-                  fill="none"
-                  strokeDasharray="3 3"
-                />
-                {/* CTL (front) */}
-                <path
-                  d={pathD(form28d.ctl, 540, 88, 8, 20)}
-                  stroke="var(--run)"
-                  strokeWidth="2"
-                  fill="none"
-                />
-                {/* Labels */}
-                <text x="6" y="12" fontSize="10" fontFamily="var(--font-mono)" fill="var(--run)">
-                  CTL · Fitness
-                </text>
-                <text x="116" y="12" fontSize="10" fontFamily="var(--font-mono)" fill="var(--bike)">
-                  ATL · Fatigue
-                </text>
-                <text x="236" y="12" fontSize="10" fontFamily="var(--font-mono)" fill="var(--swim)">
-                  TSB · Form
-                </text>
-              </svg>
+                  <path
+                    d={pathD(form28d.atl, 540, 80, 4, 4)}
+                    stroke="var(--bike)"
+                    strokeWidth="1.6"
+                    fill="none"
+                    strokeDasharray="3 3"
+                  />
+                  <path
+                    d={pathD(form28d.ctl, 540, 80, 4, 4)}
+                    stroke="var(--run)"
+                    strokeWidth="2"
+                    fill="none"
+                  />
+                </svg>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginTop: 3,
+                  }}
+                >
+                  {["4w", "3w", "2w", "1w", "now"].map((l) => (
+                    <span
+                      key={l}
+                      style={{
+                        fontSize: 9,
+                        color: "var(--fg-3)",
+                        fontFamily: "var(--font-mono)",
+                      }}
+                    >
+                      {l}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* BODY BATTERY */}
@@ -354,7 +432,7 @@ export function Dashboard() {
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
-                  marginTop: 48,
+                  marginTop: 56,
                 }}
               >
                 <TickArc
@@ -364,7 +442,7 @@ export function Dashboard() {
                     bodyBattery && bodyBattery.from > 0 ? `from ${bodyBattery.from}` : undefined
                   }
                   color="var(--run)"
-                  size={140}
+                  size={170}
                 />
               </div>
               {bodyBattery ? (
@@ -385,7 +463,7 @@ export function Dashboard() {
               <h3>Sleep</h3>
               {sleep ? (
                 <>
-                  <div style={{ marginTop: 52 }}>
+                  <div style={{ marginTop: 86 }}>
                     <div
                       style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 8 }}
                     >
