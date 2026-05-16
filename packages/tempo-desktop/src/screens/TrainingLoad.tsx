@@ -25,12 +25,21 @@ const SPORT_LABELS: Record<string, string> = {
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
+// viewBox: 0 0 1140 370
+//   - left margin 40px for Y-axis labels, chart x: 40→1130, right margin 10px
+//   - Y zero line at 260, curves span 242px upward
+const VB_ZERO = 260;
+const VB_SPAN = 242;
+const VB_TSS_BOT = 348;
+const VB_X0 = 40;   // chart left edge
+const VB_XW = 1090; // chart width  (VB_X0 + VB_XW = 1130 = chart right edge)
+
 function ctlPath(arr: number[], maxV: number): string {
   if (arr.length < 2) return "";
   return arr
     .map((v, i) => {
-      const x = ((i / (arr.length - 1)) * 1140).toFixed(1);
-      const y = (180 - (v / maxV) * 170).toFixed(1);
+      const x = (VB_X0 + (i / (arr.length - 1)) * VB_XW).toFixed(1);
+      const y = (VB_ZERO - (v / maxV) * VB_SPAN).toFixed(1);
       return `${i === 0 ? "M" : "L"}${x} ${y}`;
     })
     .join(" ");
@@ -40,8 +49,8 @@ function tsbPath(arr: number[]): string {
   if (arr.length < 2) return "";
   return arr
     .map((v, i) => {
-      const x = ((i / (arr.length - 1)) * 1140).toFixed(1);
-      const y = (180 - v * 1.2).toFixed(1);
+      const x = (VB_X0 + (i / (arr.length - 1)) * VB_XW).toFixed(1);
+      const y = (VB_ZERO - v * 1.5).toFixed(1);
       return `${i === 0 ? "M" : "L"}${x} ${y}`;
     })
     .join(" ");
@@ -60,11 +69,6 @@ function getDelta(
   if (!ref) return "";
   const d = current - ref[field];
   return `${d >= 0 ? "+" : ""}${d.toFixed(0)} / ${daysBack}d`;
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 // ── sub-components ───────────────────────────────────────────────────────────
@@ -142,7 +146,7 @@ function RampCard({ rampPerWeek }: { rampPerWeek: number }) {
           {sign}
           {rampPerWeek.toFixed(1)}
         </span>
-        <span style={{ fontSize: 13, color: "var(--fg-2)" }}>CTL / week</span>
+        <span style={{ fontSize: 13, color: "var(--fg-2)" }}>fitness pts / week</span>
       </div>
       <div
         style={{
@@ -195,36 +199,41 @@ function PerfChart({ series }: { series: LoadResponse["series"] }) {
 
   const maxCtlAtl = Math.max(...ctls, ...atls, 1);
   const maxTss = Math.max(...tsss, 1);
+  const n = series.length;
 
   const ctlD = ctlPath(ctls, maxCtlAtl);
   const atlD = ctlPath(atls, maxCtlAtl);
   const tsbD = tsbPath(tsbs);
 
-  const n = series.length;
+  const nowY = VB_ZERO - (ctls[n - 1] / maxCtlAtl) * VB_SPAN;
 
-  // Date axis: first, ~1/3, ~2/3, today
-  const axisIdxs = [0, Math.floor(n * 0.33), Math.floor(n * 0.66), n - 1];
-  const axisLabels = axisIdxs.map((i) => ({
-    x: (i / (n - 1)) * 1140,
-    label: i === n - 1 ? `${formatDate(series[i].date)} · today` : formatDate(series[i].date),
-    anchor: i === n - 1 ? "end" : i === 0 ? "start" : "middle",
+  // Y-axis: 4 evenly-spaced value labels at 25/50/75/100% of max
+  const yTicks = [0.25, 0.5, 0.75, 1.0].map((pct) => ({
+    value: Math.round(maxCtlAtl * pct),
+    y: VB_ZERO - pct * VB_SPAN,
   }));
 
-  // Phase labels at quarters
-  const phaseNames = ["BASE", "BUILD 1", "BUILD 2", "PEAK"];
-  const phases = phaseNames.map((name, q) => ({
-    x: (((q * 0.25 + 0.04) * n) / (n - 1)) * 1140,
-    name,
-  }));
-  const phaseLines = [0.25, 0.5, 0.75].map((f) => ((f * n) / (n - 1)) * 1140);
-
-  const nowY = 180 - (ctls[n - 1] / maxCtlAtl) * 170;
+  // X-axis: one label per month boundary, plus "today" at the right edge
+  const monthTicks: { x: number; label: string }[] = [];
+  let prevMonth = -1;
+  for (let i = 0; i < n; i++) {
+    const d = new Date(series[i].date);
+    const m = d.getMonth();
+    if (m !== prevMonth) {
+      const isJan = m === 0;
+      monthTicks.push({
+        x: VB_X0 + (i / (n - 1)) * VB_XW,
+        label: d.toLocaleDateString("en-US", {
+          month: "short",
+          year: isJan || prevMonth === -1 ? "2-digit" : undefined,
+        }),
+      });
+      prevMonth = m;
+    }
+  }
 
   return (
-    <div
-      className="card"
-      style={{ display: "flex", flexDirection: "column", padding: "14px 18px" }}
-    >
+    <div className="card" style={{ display: "flex", flexDirection: "column", padding: "14px 18px" }}>
       <div style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
         <h3
           style={{
@@ -235,7 +244,7 @@ function PerfChart({ series }: { series: LoadResponse["series"] }) {
             color: "var(--fg-2)",
           }}
         >
-          Performance Management
+          Fitness · Fatigue · Form
         </h3>
         <div
           style={{
@@ -248,142 +257,90 @@ function PerfChart({ series }: { series: LoadResponse["series"] }) {
           }}
         >
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-            <span
-              style={{ width: 12, height: 2, background: "var(--run)", display: "inline-block" }}
-            />
-            CTL
+            <span style={{ width: 12, height: 2, background: "var(--run)", display: "inline-block" }} />
+            Fitness
           </span>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-            <span
-              style={{
-                width: 12,
-                height: 0,
-                borderTop: "2px dashed var(--bike)",
-                display: "inline-block",
-              }}
-            />
-            ATL
+            <span style={{ width: 12, height: 0, borderTop: "2px dashed var(--bike)", display: "inline-block" }} />
+            Fatigue
           </span>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-            <span
-              style={{ width: 12, height: 2, background: "var(--swim)", display: "inline-block" }}
-            />
-            TSB
+            <span style={{ width: 12, height: 2, background: "var(--swim)", display: "inline-block" }} />
+            Form
           </span>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-            <span
-              style={{
-                width: 7,
-                height: 7,
-                background: "var(--fg-3)",
-                borderRadius: 1,
-                display: "inline-block",
-              }}
-            />
-            daily TSS
+            <span style={{ width: 7, height: 7, background: "var(--fg-3)", borderRadius: 1, display: "inline-block" }} />
+            Daily load
           </span>
         </div>
       </div>
-      <div style={{ position: "relative", minHeight: 240 }}>
-        <svg
-          width="100%"
-          height="100%"
-          viewBox="0 0 1140 280"
-          preserveAspectRatio="none"
-          style={{ overflow: "visible", display: "block", minHeight: 240 }}
-          aria-hidden="true"
-        >
-          {/* Horizontal gridlines */}
-          {[40, 80, 120, 160].map((y) => (
-            <line
-              key={y}
-              x1="0"
-              y1={y}
-              x2="1140"
-              y2={y}
-              stroke="var(--line-soft)"
-              strokeDasharray="2 4"
-            />
-          ))}
-
-          {/* TSB zero baseline */}
-          <line x1="0" y1="180" x2="1140" y2="180" stroke="var(--line)" strokeDasharray="3 3" />
-
-          {/* Daily TSS bars */}
-          {tsss.map((v, i) => {
-            const x = (i / (n - 1)) * 1140;
-            const h = (v / maxTss) * 50;
-            return (
-              <rect
-                key={x.toFixed(2)}
-                x={x - 1.5}
-                y={280 - h}
-                width="3"
-                height={h}
-                fill="var(--fg-3)"
-                opacity="0.55"
-              />
-            );
-          })}
-
-          {phaseLines.map((x) => (
-            <line
-              key={x}
-              x1={x}
-              y1="20"
-              x2={x}
-              y2="270"
-              stroke="var(--line)"
-              strokeDasharray="1 4"
-            />
-          ))}
-          <g fontFamily="var(--font-mono)" fontSize="10" fill="var(--fg-2)">
-            {phases.map(({ x, name }) => (
-              <text key={name} x={x} y="14">
-                {name}
-              </text>
-            ))}
+      {/*
+        viewBox: 0 0 1200 360
+          - chart area: x 0–1140, leaves 60px right for Y-axis labels
+          - zero line at y=260, curves span 242px upward
+          - TSS bars fill bottom band (y=260 → y=348)
+          - no explicit height → browser intrinsically sizes from aspect ratio (no stretch)
+      */}
+      <svg
+        width="100%"
+        viewBox="0 0 1140 370"
+        style={{ display: "block" }}
+        aria-hidden="true"
+      >
+        {/* Y-axis grid lines + left-side value labels (inside viewBox margin) */}
+        {yTicks.map(({ value, y }) => (
+          <g key={y}>
+            <line x1={VB_X0} y1={y} x2={VB_X0 + VB_XW} y2={y} stroke="var(--line-soft)" strokeDasharray="2 4" />
+            <text
+              x={VB_X0 - 6}
+              y={y + 3.5}
+              fontSize="9"
+              fontFamily="var(--font-mono)"
+              fill="var(--fg-2)"
+              textAnchor="end"
+            >
+              {value}
+            </text>
           </g>
+        ))}
 
-          {/* CTL filled area + line */}
-          <path d={`${ctlD} L 1140 180 L 0 180 Z`} fill="var(--run)" opacity="0.08" />
-          <path d={ctlD} stroke="var(--run)" strokeWidth="2.2" fill="none" />
+        {/* Form (TSB) zero baseline */}
+        <line x1={VB_X0} y1={VB_ZERO} x2={VB_X0 + VB_XW} y2={VB_ZERO} stroke="var(--line)" strokeDasharray="3 3" />
 
-          {/* ATL dashed line */}
-          <path d={atlD} stroke="var(--bike)" strokeWidth="1.5" fill="none" strokeDasharray="4 3" />
+        {/* Daily load bars — bottom band */}
+        {tsss.map((v, i) => {
+          const x = VB_X0 + (i / (n - 1)) * VB_XW;
+          const h = (v / maxTss) * 70;
+          return (
+            <rect key={x.toFixed(2)} x={x - 1.5} y={VB_TSS_BOT - h} width="3" height={h} fill="var(--fg-3)" opacity="0.55" />
+          );
+        })}
 
-          {/* TSB line */}
-          <path d={tsbD} stroke="var(--swim)" strokeWidth="1.5" fill="none" />
+        {/* Fitness (CTL) filled area + line */}
+        <path d={`${ctlD} L ${VB_X0 + VB_XW} ${VB_ZERO} L ${VB_X0} ${VB_ZERO} Z`} fill="var(--run)" opacity="0.08" />
+        <path d={ctlD} stroke="var(--run)" strokeWidth="2.2" fill="none" />
 
-          {/* Now marker */}
-          <line
-            x1="1140"
-            y1="0"
-            x2="1140"
-            y2="280"
-            stroke="var(--fg-0)"
-            strokeOpacity="0.35"
-            strokeDasharray="2 3"
-          />
-          <circle
-            cx="1140"
-            cy={nowY}
-            r="4"
-            fill="var(--bg-0)"
-            stroke="var(--run)"
-            strokeWidth="2"
-          />
+        {/* Fatigue (ATL) dashed line */}
+        <path d={atlD} stroke="var(--bike)" strokeWidth="1.5" fill="none" strokeDasharray="4 3" />
 
-          {/* X-axis date labels */}
-          <g fontFamily="var(--font-mono)" fontSize="9" fill="var(--fg-3)">
-            {axisLabels.map(({ x, label, anchor }) => (
-              <text key={label} x={x} y="276" textAnchor={anchor as "start" | "middle" | "end"}>
-                {label}
-              </text>
-            ))}
-          </g>
-        </svg>
-      </div>
+        {/* Form (TSB) line */}
+        <path d={tsbD} stroke="var(--swim)" strokeWidth="1.5" fill="none" />
+
+        {/* "Today" vertical marker */}
+        <line x1={VB_X0 + VB_XW} y1="0" x2={VB_X0 + VB_XW} y2={VB_TSS_BOT} stroke="var(--fg-0)" strokeOpacity="0.3" strokeDasharray="2 3" />
+        <circle cx={VB_X0 + VB_XW} cy={nowY} r="4" fill="var(--bg-0)" stroke="var(--run)" strokeWidth="2" />
+
+        {/* X-axis: month tick marks + labels */}
+        <g fontFamily="var(--font-mono)" fontSize="9" fill="var(--fg-3)">
+          {monthTicks.map(({ x, label }) => (
+            <g key={label + x.toFixed(0)}>
+              <line x1={x} y1={VB_TSS_BOT + 2} x2={x} y2={VB_TSS_BOT + 7} stroke="var(--fg-3)" strokeWidth="1" />
+              <text x={x} y={VB_TSS_BOT + 18} textAnchor="middle">{label}</text>
+            </g>
+          ))}
+          <text x={VB_X0 + VB_XW} y={VB_TSS_BOT + 18} textAnchor="end" fill="var(--fg-2)">today</text>
+        </g>
+      </svg>
     </div>
   );
 }
@@ -398,7 +355,7 @@ function WeeklyVolume({ weekly }: { weekly: LoadResponse["weekly"] }) {
   );
 
   return (
-    <div className="card">
+    <div className="card" style={{ flexShrink: 0 }}>
       <div style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
         <h3
           style={{
@@ -439,19 +396,19 @@ function WeeklyVolume({ weekly }: { weekly: LoadResponse["weekly"] }) {
       </div>
       <svg
         width="100%"
-        height="80"
-        viewBox="0 0 1140 80"
+        height="108"
+        viewBox="0 0 1140 108"
         preserveAspectRatio="none"
         aria-hidden="true"
       >
         {shown.map((w, i) => {
           const barW = 1140 / shown.length - 6;
           const x = i * (1140 / shown.length) + 3;
-          let y = 70;
+          let y = 96;
           return (
             <g key={w.weekStart}>
               {[...SPORTS].map((sp) => {
-                const h = ((w.bySport[sp] ?? 0) / maxTotal) * 64;
+                const h = ((w.bySport[sp] ?? 0) / maxTotal) * 88;
                 y -= h;
                 return (
                   <rect
@@ -467,7 +424,7 @@ function WeeklyVolume({ weekly }: { weekly: LoadResponse["weekly"] }) {
               })}
               <text
                 x={x + barW / 2}
-                y={78}
+                y={106}
                 textAnchor="middle"
                 fontSize="9"
                 fontFamily="var(--font-mono)"
@@ -528,7 +485,8 @@ export function TrainingLoad() {
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       <TopBar crumbs={["Library", "Training load", RANGE_LABELS[range]]} right={rangeSelector} />
-      <div className="flex-1 overflow-y-auto p-5 space-y-3">
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-5 flex flex-col gap-3" style={{ minHeight: "100%" }}>
         {isLoading &&
           Array.from({ length: 3 }).map((_, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
@@ -538,23 +496,23 @@ export function TrainingLoad() {
         {data && (
           <>
             {/* 4 metric cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, flexShrink: 0 }}>
               <BigStat
-                label="CTL · Fitness"
+                label="Fitness · CTL"
                 value={data.current.ctl.toFixed(0)}
                 delta={ctlDelta}
                 tone="var(--run)"
-                desc="rolling 42d load average"
+                desc="Long-term training load. Builds gradually over months."
               />
               <BigStat
-                label="ATL · Fatigue"
+                label="Fatigue · ATL"
                 value={data.current.atl.toFixed(0)}
                 delta={atlDelta}
                 tone="var(--bike)"
-                desc="rolling 7d load average"
+                desc="Short-term stress. Rises fast after hard sessions."
               />
               <BigStat
-                label="TSB · Form"
+                label="Form · TSB"
                 value={
                   data.current.tsb > 0
                     ? `+${data.current.tsb.toFixed(0)}`
@@ -562,7 +520,7 @@ export function TrainingLoad() {
                 }
                 delta={tsbDelta}
                 tone="var(--swim)"
-                desc="CTL − ATL"
+                desc="Freshness = Fitness − Fatigue. Positive means ready to race."
               />
               <RampCard rampPerWeek={rampPerWeek} />
             </div>
@@ -575,7 +533,7 @@ export function TrainingLoad() {
 
             {/* Recommendations */}
             {data.recommendations.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-2" style={{ flexShrink: 0 }}>
                 {data.recommendations.map((r) => (
                   <div key={r.body} className="card">
                     <span
@@ -597,6 +555,7 @@ export function TrainingLoad() {
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   );
