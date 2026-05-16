@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import func
 
 from tempo_sync.api.deps import DbDep, TokenDep
-from tempo_sync.db.models import Badge, CourseBest, PersonalRecord, RacePrediction, Vo2maxHistory
+from tempo_sync.db.models import Badge, CourseBest, DailyMetric, PersonalRecord, RacePrediction, Vo2maxHistory
 
 router = APIRouter()
 
@@ -122,19 +122,33 @@ def _fmt_time(seconds: int) -> str:
 def get_progress(_token: TokenDep, db: DbDep):
     today = date.today()
 
-    # ── VO2max ──────────────────────────────────────────────────────────────────
-    vo2_rows = (
+    # ── VO2max — merge monthly snapshots (Vo2maxHistory) + recent daily (DailyMetric) ──
+    hist_rows = (
         db.query(Vo2maxHistory)
         .filter(Vo2maxHistory.sport == "run")
         .order_by(Vo2maxHistory.date)
         .all()
     )
-    vo2_months = [r.date.strftime("%Y-%m") for r in vo2_rows]
-    vo2_values = [r.value for r in vo2_rows]
+    dm_rows = (
+        db.query(DailyMetric)
+        .filter(DailyMetric.vo2max.isnot(None))
+        .order_by(DailyMetric.date)
+        .all()
+    )
+
+    # DailyMetric first (daily readings), then Vo2maxHistory overwrites (authoritative snapshots)
+    merged: dict[date, float] = {r.date: r.vo2max for r in dm_rows}
+    for r in hist_rows:
+        merged[r.date] = r.value
+
+    sorted_dates = sorted(merged.keys())
+    vo2_months = [d.isoformat() for d in sorted_dates]  # full YYYY-MM-DD strings
+    vo2_values = [merged[d] for d in sorted_dates]
+
     delta = 0.0
     if len(vo2_values) >= 2:
         cutoff = today - timedelta(days=90)
-        old = next((r.value for r in vo2_rows if r.date <= cutoff), vo2_values[0])
+        old = next((merged[d] for d in sorted_dates if d <= cutoff), vo2_values[0])
         delta = round(vo2_values[-1] - old, 1)
 
     latest_vo2 = vo2_values[-1] if vo2_values else None
@@ -185,10 +199,18 @@ def get_progress(_token: TokenDep, db: DbDep):
         pr_info = pr_by_dist.get(metric_key)
         pr_secs = int(pr_info[0]) if pr_info else None
         pr_date = pr_info[1] or "--" if pr_info else "--"
-        delta_pct = (
-            round((row.predicted_time_s - pr_secs) / pr_secs * 100, 1)
-            if pr_secs else None
-        )
+        if pr_secs:
+            raw_delta = round((row.predicted_time_s - pr_secs) / pr_secs * 100, 1)
+            # Discard PR if it implies an implausible delta (> 25% gap likely means
+            # the inferred distance mapping is wrong, e.g. a 50k labelled as marathon)
+            if abs(raw_delta) > 25:
+                pr_secs = None
+                pr_date = "--"
+                delta_pct = None
+            else:
+                delta_pct: float | None = raw_delta
+        else:
+            delta_pct = None
         predictions.append(PredictionOut(
             distance=metric_key,
             distLabel=dist_label,

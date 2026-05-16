@@ -121,6 +121,13 @@ function fmtTeLabel(raw: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function teDesc(val: number): string {
+  if (val >= 4) return "Highly improving";
+  if (val >= 3) return "Improving";
+  if (val >= 2) return "Maintaining";
+  return "Base";
+}
+
 interface DynamicBarProps {
   label: string;
   value: string;
@@ -401,7 +408,7 @@ export function ActivityDetail({ id }: Props) {
       />
 
       <div
-        className="flex-1 overflow-y-auto p-5"
+        className="flex-1 overflow-hidden p-5"
         style={{ display: "flex", flexDirection: "column", gap: 14 }}
       >
         {/* Hero stat strip — 8-column grid */}
@@ -462,11 +469,11 @@ export function ActivityDetail({ id }: Props) {
         </div>
 
         {/* Map + Chart row */}
-        <div style={{ display: "grid", gridTemplateColumns: "440px 1fr", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "440px 1fr", gap: 14, flex: "1 1 0", minHeight: 0 }}>
           {/* MAP card */}
           <div
             className="card"
-            style={{ padding: 0, position: "relative", overflow: "hidden", height: 286 }}
+            style={{ padding: 0, position: "relative", overflow: "hidden", height: "100%" }}
           >
             <div
               style={{
@@ -612,10 +619,10 @@ export function ActivityDetail({ id }: Props) {
           <div
             className="card"
             ref={containerRef}
-            style={{ padding: "12px 14px", height: 286, overflow: "hidden", cursor: "crosshair" }}
+            style={{ padding: "12px 14px", height: "100%", overflow: "hidden", cursor: "crosshair", display: "flex", flexDirection: "column" }}
             onMouseMove={onChartMove}
           >
-            <div style={{ display: "flex", alignItems: "center", marginBottom: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", marginBottom: 6, flexShrink: 0 }}>
               <h3 style={{ margin: 0 }}>Synchronized series</h3>
               <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
                 {tracks.map((t) => (
@@ -637,9 +644,10 @@ export function ActivityDetail({ id }: Props) {
             </div>
             <svg
               width="100%"
+              height="100%"
               viewBox={`0 0 ${CHART_W} ${chartH + 14}`}
               preserveAspectRatio="none"
-              style={{ display: "block" }}
+              style={{ display: "block", flex: 1, minHeight: 0 }}
               role="img"
               aria-label="Synchronized series chart"
             >
@@ -789,8 +797,8 @@ export function ActivityDetail({ id }: Props) {
             </div>
             <svg
               width="100%"
-              height="114"
-              viewBox="0 0 1140 114"
+              height="140"
+              viewBox="0 0 1140 140"
               preserveAspectRatio="none"
               role="img"
               aria-label="Splits bar chart"
@@ -799,8 +807,8 @@ export function ActivityDetail({ id }: Props) {
                 const w = 1140 / splits.length;
                 const x = si * w;
                 const norm = maxPace > minPace ? 1 - (s.pace - minPace) / (maxPace - minPace) : 0.5;
-                const h = 12 + norm * 56;
-                const y = 84 - h;
+                const h = 14 + norm * 70;
+                const y = 102 - h;
                 return (
                   <g key={s.k}>
                     <rect
@@ -823,7 +831,7 @@ export function ActivityDetail({ id }: Props) {
                     </text>
                     <text
                       x={x + w / 2}
-                      y="100"
+                      y="118"
                       textAnchor="middle"
                       fontFamily="var(--font-mono)"
                       fontSize="9"
@@ -833,7 +841,7 @@ export function ActivityDetail({ id }: Props) {
                     </text>
                     <rect
                       x={x + w / 2 - 1}
-                      y={108}
+                      y={126}
                       width="2"
                       height={Math.max(2, Math.abs(s.elevDelta) * 0.4)}
                       fill={s.elevDelta >= 0 ? "var(--fg-2)" : "var(--fg-3)"}
@@ -846,7 +854,7 @@ export function ActivityDetail({ id }: Props) {
         )}
 
         {/* Heart-rate zones + Running dynamics + Training effect */}
-        <div style={{ display: "grid", gridTemplateColumns: "300px 400px 1fr", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "300px 460px 1fr", gap: 14 }}>
           {/* HR Zones — reversed (Z5 at top) */}
           <div className="card">
             <h3>Heart-rate zones</h3>
@@ -1051,38 +1059,29 @@ export function ActivityDetail({ id }: Props) {
             <h3>Training effect</h3>
             <div
               style={{
-                fontSize: 14,
-                fontWeight: 500,
+                fontSize: 13,
                 color: "var(--fg-0)",
-                marginBottom: trainingEffect.sub ? 4 : 12,
+                marginBottom: 12,
+                lineHeight: 1.4,
+                maxWidth: 360,
               }}
             >
               {fmtTeLabel(trainingEffect.headline)}
+              {trainingEffect.sub && (
+                <span style={{ color: "var(--fg-2)" }}> {trainingEffect.sub}</span>
+              )}
             </div>
-            {trainingEffect.sub && (
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "var(--fg-2)",
-                  marginBottom: 12,
-                  lineHeight: 1.4,
-                  maxWidth: 340,
-                }}
-              >
-                {trainingEffect.sub}
-              </div>
-            )}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
               <TEBar
                 label="Aerobic"
                 value={trainingEffect.aerobic}
-                desc={trainingEffect.aeroLabel || "Base"}
+                desc={trainingEffect.aeroLabel || teDesc(trainingEffect.aerobic)}
                 tone={accent}
               />
               <TEBar
                 label="Anaerobic"
                 value={trainingEffect.anaerobic}
-                desc={trainingEffect.anLabel || "Base"}
+                desc={trainingEffect.anLabel || teDesc(trainingEffect.anaerobic)}
                 tone="var(--bike)"
               />
             </div>

@@ -69,3 +69,12 @@ class GarminClient:
 
     def personal_records(self) -> list[dict]:
         return self._require().get_personal_record()
+
+    def user_summary(self, date_str: str) -> dict:
+        return self._require().get_user_summary(date_str)
+
+    def spo2_data(self, date_str: str) -> dict:
+        return self._require().get_spo2_data(date_str)
+
+    def training_status(self, date_str: str) -> dict:
+        return self._require().get_training_status(date_str) or {}

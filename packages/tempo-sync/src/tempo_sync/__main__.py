@@ -71,6 +71,40 @@ def auth_logout():
     typer.echo("Logged out.")
 
 
+@app.command("backfill-training")
+def backfill_training():
+    """Fetch EPOC, recovery, and IF from Garmin API for existing activities that lack them."""
+    from tempo_sync.auth.tokens import TokenStore
+    from tempo_sync.db.models import Activity
+    from tempo_sync.db.session import get_db
+    from tempo_sync.garmin.client import GarminClient
+    from tempo_sync.sync.activities import backfill_training_fields
+
+    store = TokenStore()
+    client = GarminClient(store)
+    if not client.resume():
+        typer.echo("Not authenticated. Run `tempo-sync auth login` first.", err=True)
+        raise typer.Exit(1)
+
+    db = get_db()
+    try:
+        total = (
+            db.query(Activity)
+            .filter((Activity.epoc == None) | (Activity.recovery_time_h == None))  # noqa: E711
+            .count()
+        )
+        typer.echo(f"Backfilling training fields for {total} activities…")
+        updated, failed = backfill_training_fields(client=client, db=db)
+        db.commit()
+        typer.echo(f"Done — updated {updated}, failed {failed}.")
+    except Exception as e:
+        db.rollback()
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1)
+    finally:
+        db.close()
+
+
 @db_app.command("inspect")
 def db_inspect():
     """Print row counts per table."""

@@ -42,8 +42,8 @@ export interface ActivityDetailResponse {
     groundContactMs: number;
     strideLengthM: number;
     verticalRatioPct: number;
-    leftPct: number;
-    rightPct: number;
+    leftPct: number | null;
+    rightPct: number | null;
   } | null;
   trainingEffect: {
     headline: string;

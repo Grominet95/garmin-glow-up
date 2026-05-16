@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
@@ -46,18 +46,35 @@ def _pull_day(client: GarminClient, db: Session, d: date, date_str: str) -> None
                 metric.sleep_end = datetime.fromtimestamp(end_gmt / 1000)
 
             stages = sleep.get("sleepLevels", [])
+            logger.debug("sleepLevels for %s: %d segments, keys=%s", date_str, len(stages or []), list((stages[0] if stages else {}).keys()))
             db.query(SleepStage).filter(SleepStage.date == d).delete()
-            stage_map = {"deep": "deep", "light": "light", "rem": "rem", "awake": "awake"}
-            if stages and metric.sleep_start:
+            _str_stage = {"deep": "deep", "light": "light", "rem": "rem", "awake": "awake"}
+            # Garmin may return activityLevel as a numeric code instead of a string
+            _num_stage = {0: "deep", 1: "light", 2: "rem", 3: "awake"}
+            sleep_start_ms = sleep.get("dailySleepDTO", {}).get("sleepStartTimestampGMT")
+            if stages and sleep_start_ms:
+                sleep_start_epoch = sleep_start_ms / 1000
                 for seg in stages:
-                    stage_name = seg.get("activityLevel", "").lower()
-                    if stage_name not in stage_map:
+                    raw = seg.get("activityLevel")
+                    if raw is None:
+                        continue
+                    if isinstance(raw, (int, float)):
+                        stage_name = _num_stage.get(int(raw))
+                    else:
+                        stage_name = _str_stage.get(str(raw).lower())
+                    if not stage_name:
                         continue
                     start_ts = seg.get("startGMT")
-                    end_ts = seg.get("endGMT")
-                    if start_ts and end_ts:
-                        offset_min = int((datetime.fromisoformat(start_ts) - metric.sleep_start).total_seconds() / 60)
-                        db.add(SleepStage(date=d, t_offset_min=offset_min, stage=stage_map[stage_name]))
+                    if not start_ts:
+                        continue
+                    try:
+                        # startGMT is a UTC string — use epoch arithmetic to avoid tz confusion
+                        start_epoch = datetime.fromisoformat(str(start_ts)).replace(tzinfo=timezone.utc).timestamp()
+                        offset_min = int((start_epoch - sleep_start_epoch) / 60)
+                        if offset_min >= 0:
+                            db.add(SleepStage(date=d, t_offset_min=offset_min, stage=stage_name))
+                    except (ValueError, TypeError):
+                        pass
             updated = True
     except Exception as e:
         logger.debug("Sleep fetch error: %s", e)
@@ -131,10 +148,10 @@ def _pull_day(client: GarminClient, db: Session, d: date, date_str: str) -> None
             def _s(key: str) -> int | None:
                 v = summary.get(key)
                 return int(v) if v is not None and int(v) >= 0 else None
-            metric.stress_rest_s = _s("restStressDurationSeconds")
-            metric.stress_low_s = _s("lowStressDurationSeconds")
-            metric.stress_med_s = _s("mediumStressDurationSeconds")
-            metric.stress_high_s = _s("highStressDurationSeconds")
+            metric.stress_rest_s = _s("restStressDuration")
+            metric.stress_low_s = _s("lowStressDuration")
+            metric.stress_med_s = _s("mediumStressDuration")
+            metric.stress_high_s = _s("highStressDuration")
             updated = True
     except Exception as e:
         logger.debug("User summary fetch error: %s", e)
@@ -150,6 +167,16 @@ def _pull_day(client: GarminClient, db: Session, d: date, date_str: str) -> None
             updated = True
     except Exception as e:
         logger.debug("SpO2 fetch error: %s", e)
+
+    try:
+        status = client.training_status(date_str)
+        generic = (status.get("mostRecentVO2Max") or {}).get("generic") or {}
+        vo2 = generic.get("vo2MaxPreciseValue") or generic.get("vo2MaxValue")
+        if vo2 is not None:
+            metric.vo2max = float(vo2)
+            updated = True
+    except Exception as e:
+        logger.debug("Training status fetch error: %s", e)
 
     if updated or db.get(DailyMetric, d) is None:
         db.merge(metric)

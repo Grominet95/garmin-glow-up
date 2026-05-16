@@ -133,11 +133,17 @@ def pull_recent(client: GarminClient, db: Session, days: int = 365, force: bool 
             act.training_effect_aerobic = raw.get("aerobicTrainingEffect")
             act.training_effect_anaerobic = raw.get("anaerobicTrainingEffect")
             act.training_effect_label = raw.get("trainingEffectLabel")
-            act.tss = _estimate_tss(
-                duration_s=act.duration_s,
-                avg_hr=act.avg_hr,
-                sport=act.sport,
-                aerobic_te=act.training_effect_aerobic,
+            # Prefer Garmin's official training load over our HR-based estimate
+            garmin_load = raw.get("activityTrainingLoad")
+            act.tss = (
+                round(float(garmin_load), 1)
+                if garmin_load is not None
+                else _estimate_tss(
+                    duration_s=act.duration_s,
+                    avg_hr=act.avg_hr,
+                    sport=act.sport,
+                    aerobic_te=act.training_effect_aerobic,
+                )
             )
             act.updated_at = datetime.utcnow()
             if not existing:
@@ -221,6 +227,16 @@ def _ingest_fit(act: Activity, blob: bytes, db: Session) -> None:
     act.has_dynamics = has_dyn
     act.has_power = has_pwr
 
+    # Session-level metrics (normalized power, avg cadence)
+    if parsed.sessions:
+        session = parsed.sessions[0]
+        np_w = session.get("normalized_power")
+        if np_w is not None:
+            act.np_w = int(np_w)
+        avg_run_cad = session.get("avg_running_cadence") or session.get("avg_cadence")
+        if avg_run_cad is not None:
+            act.avg_cadence = int(avg_run_cad * 2)  # strides/min → steps/min
+
     # Laps
     athlete_max_hr = 190
     for i, lap in enumerate(parsed.laps):
@@ -267,3 +283,61 @@ def _ingest_fit(act: Activity, blob: bytes, db: Session) -> None:
                 zone=z,
                 seconds=count,
             ))
+
+
+def backfill_training_fields(
+    client: GarminClient,
+    db: Session,
+    batch_size: int = 10,
+) -> tuple[int, int]:
+    """Pull summaryDTO from Garmin for activities missing accurate training load or NP.
+
+    Updates: tss (→ activityTrainingLoad), np_w (→ normalizedPower),
+             avg_cadence (→ averageRunCadence), avg_hr/max_hr if missing.
+    EPOC and recoveryTime are not exposed by any Garmin Connect API endpoint.
+
+    Returns (updated, failed).
+    """
+    activities = (
+        db.query(Activity)
+        .order_by(Activity.start_time.desc())
+        .all()
+    )
+
+    updated = 0
+    failed = 0
+    for i, act in enumerate(activities):
+        try:
+            detail = client.activity_details(act.id)
+            summary = detail.get("summaryDTO") or {}
+
+            changed = False
+
+            load = summary.get("activityTrainingLoad")
+            if load is not None:
+                act.tss = round(float(load), 1)
+                changed = True
+
+            np_w = summary.get("normalizedPower")
+            if np_w is not None and act.np_w is None:
+                act.np_w = int(np_w)
+                changed = True
+
+            avg_cad = summary.get("averageRunCadence")
+            if avg_cad is not None and act.avg_cadence is None:
+                act.avg_cadence = int(avg_cad)
+                changed = True
+
+            if changed:
+                act.updated_at = datetime.utcnow()
+                updated += 1
+
+            if (i + 1) % batch_size == 0:
+                db.flush()
+
+        except Exception as e:
+            logger.warning("backfill_training_fields failed for %s: %s", act.id, e)
+            failed += 1
+
+    db.flush()
+    return updated, failed

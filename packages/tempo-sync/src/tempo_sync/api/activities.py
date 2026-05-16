@@ -131,8 +131,8 @@ class DynamicsOut(BaseModel):
     groundContactMs: float
     strideLengthM: float
     verticalRatioPct: float
-    leftPct: float
-    rightPct: float
+    leftPct: float | None
+    rightPct: float | None
 
 
 class TrainingEffect(BaseModel):
@@ -185,10 +185,14 @@ ZONE_META = [
 
 @router.get("/activities/{activity_id}", response_model=ActivityDetailResponse)
 def get_activity(_token: TokenDep, db: DbDep, activity_id: int):
+    from tempo_sync.db.models import Athlete
     act = db.query(Activity).filter(Activity.id == activity_id).first()
     if not act:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Activity not found")
+
+    athlete = db.query(Athlete).first()
+    athlete_ftp = athlete.ftp if athlete else None
 
     missing: list[str] = []
     if not act.has_dynamics:
@@ -296,14 +300,18 @@ def get_activity(_token: TokenDep, db: DbDep, activity_id: int):
                 ]
                 avg_sl = sum(derived) / len(derived) if derived else 0.0
 
-            vr = (avg_vo_cm / (avg_sl * 100)) * 100 if avg_sl > 0 else 0.0
+            # VR uses step_length (half a stride), matching Garmin's definition
+            step_len_m = avg_sl / 2 if avg_sl > 0 else 0.0
+            vr = (avg_vo_cm / (step_len_m * 100)) * 100 if step_len_m > 0 else 0.0
+            left_pct = round(avg_bal, 1) if bal_vals else None
+            right_pct = round(100 - avg_bal, 1) if bal_vals else None
             dynamics_out = DynamicsOut(
                 verticalOscCm=round(avg_vo_cm, 1),
                 groundContactMs=round(avg_gct),
                 strideLengthM=round(avg_sl, 2),
                 verticalRatioPct=round(vr, 1),
-                leftPct=round(avg_bal, 1),
-                rightPct=round(100 - avg_bal, 1),
+                leftPct=left_pct,
+                rightPct=right_pct,
             )
 
     # Zones
@@ -376,7 +384,10 @@ def get_activity(_token: TokenDep, db: DbDep, activity_id: int):
             anLabel="",
             epoc=act.epoc or 0,
             load=act.tss or 0,
-            intensity=act.intensity_factor,
+            intensity=(
+                act.intensity_factor
+                or (round(act.np_w / athlete_ftp, 2) if act.np_w and athlete_ftp else None)
+            ),
             recoveryHours=act.recovery_time_h or 0,
         ),
         missing=missing,
