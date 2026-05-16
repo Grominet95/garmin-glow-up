@@ -6,11 +6,12 @@ import { fmtHr } from "../lib/format";
 
 const WINDOWS: HealthWindow[] = ["7d", "30d", "90d", "1y"];
 
+// Sleep stage colors: 0=awake 1=light 2=rem 3=deep
 const SLEEP_COLOR: Record<number, string> = {
-  0: "var(--fg-3)", // awake
-  1: "var(--z2)", // light
-  2: "var(--z3)", // rem
-  3: "var(--z5)", // deep
+  0: "var(--fg-3)",
+  1: "var(--z2)",
+  2: "var(--z3)",
+  3: "var(--z5)",
 };
 const SLEEP_LABEL: Record<number, string> = { 0: "Awake", 1: "Light", 2: "REM", 3: "Deep" };
 
@@ -33,17 +34,13 @@ function fmtStageDuration(seconds: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}` : `0:${String(m).padStart(2, "0")}`;
 }
 
-// ─── SVG components ─────────────────────────────────────────────────────────
+// ─── filled sparkline ─────────────────────────────────────────────────────
 
 function FilledSparkline({
   data,
   color,
   gradId,
-}: {
-  data: (number | null)[];
-  color: string;
-  gradId: string;
-}) {
+}: { data: (number | null)[]; color: string; gradId: string }) {
   const vals = data.filter((v): v is number => v !== null && Number.isFinite(v));
   if (!vals.length) return <div className="empty-card rounded" style={{ height: 48 }} />;
 
@@ -91,7 +88,7 @@ function FilledSparkline({
     >
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.22" />
+          <stop offset="0%" stopColor={color} stopOpacity="0.2" />
           <stop offset="100%" stopColor={color} stopOpacity="0.02" />
         </linearGradient>
       </defs>
@@ -111,10 +108,11 @@ function FilledSparkline({
   );
 }
 
+// ─── sleep hypnogram ─────────────────────────────────────────────────────
+
 function SleepHypnogram({ segments, durationS }: { segments: SleepSegment[]; durationS: number }) {
   const totalMin = Math.max(durationS / 60, 1);
   if (!segments.length) return null;
-
   const segs = segments.map((s, i) => ({
     ...s,
     durMin: Math.max(
@@ -122,16 +120,15 @@ function SleepHypnogram({ segments, durationS }: { segments: SleepSegment[]; dur
       i < segments.length - 1 ? segments[i + 1].offsetMin - s.offsetMin : totalMin - s.offsetMin
     ),
   }));
-
   return (
-    <div style={{ display: "grid", gridTemplateRows: "repeat(4, 14px)", gap: 2 }}>
-      {[0, 1, 2, 3].map((row) => (
-        <div key={row} style={{ display: "flex", alignItems: "stretch" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      {[1, 2, 3].map((row) => (
+        <div key={row} style={{ display: "flex", alignItems: "stretch", height: 14 }}>
           <span
             style={{
               fontSize: 9,
               color: "var(--fg-3)",
-              width: 30,
+              width: 32,
               flexShrink: 0,
               textTransform: "uppercase",
               letterSpacing: "0.07em",
@@ -163,14 +160,14 @@ function SleepHypnogram({ segments, durationS }: { segments: SleepSegment[]; dur
 function FallbackHypnogram({ blocks }: { blocks: number[] }) {
   if (!blocks.length) return null;
   return (
-    <div style={{ display: "grid", gridTemplateRows: "repeat(4, 14px)", gap: 2 }}>
-      {[0, 1, 2, 3].map((row) => (
-        <div key={row} style={{ display: "flex", alignItems: "stretch" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      {[1, 2, 3].map((row) => (
+        <div key={row} style={{ display: "flex", alignItems: "stretch", height: 14 }}>
           <span
             style={{
               fontSize: 9,
               color: "var(--fg-3)",
-              width: 30,
+              width: 32,
               flexShrink: 0,
               textTransform: "uppercase",
               letterSpacing: "0.07em",
@@ -180,20 +177,17 @@ function FallbackHypnogram({ blocks }: { blocks: number[] }) {
             {SLEEP_LABEL[row]}
           </span>
           <div style={{ flex: 1, display: "flex", gap: 1 }}>
-            {blocks.map((stage, i) => {
-              // biome-ignore lint/suspicious/noArrayIndexKey: positional epoch slots with no natural key
-              return (
-                <div
-                  key={i}
-                  style={{
-                    flex: 1,
-                    height: "100%",
-                    background: stage === row ? SLEEP_COLOR[row] : "transparent",
-                    borderRadius: 2,
-                  }}
-                />
-              );
-            })}
+            {Object.entries(blocks).map(([idx, stage]) => (
+              <div
+                key={idx}
+                style={{
+                  flex: 1,
+                  height: "100%",
+                  background: stage === row ? SLEEP_COLOR[row] : "transparent",
+                  borderRadius: 2,
+                }}
+              />
+            ))}
           </div>
         </div>
       ))}
@@ -201,33 +195,54 @@ function FallbackHypnogram({ blocks }: { blocks: number[] }) {
   );
 }
 
-// Proportional bar from stage totals — fallback when no segment timeline is available
+// Proportional bar when no stage timeline exists
 function SleepTotalsBar({
   totals,
   durationS,
-}: {
-  totals: { awakeS: number; lightS: number; remS: number; deepS: number };
-  durationS: number;
-}) {
+}: { totals: { awakeS: number; lightS: number; remS: number; deepS: number }; durationS: number }) {
   if (!durationS) return null;
-  const stages = [
-    { key: "deepS" as const, stage: 3 },
-    { key: "remS" as const, stage: 2 },
-    { key: "lightS" as const, stage: 1 },
-    { key: "awakeS" as const, stage: 0 },
-  ];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      {stages.map(({ key, stage }) => {
+      {(
+        [
+          { key: "deepS", stage: 3 },
+          { key: "remS", stage: 2 },
+          { key: "lightS", stage: 1 },
+          { key: "awakeS", stage: 0 },
+        ] as const
+      ).map(({ key, stage }) => {
         const s = (totals[key] ?? 0) as number;
-        const pct = (s / durationS) * 100;
         return (
           <div key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 9, color: "var(--fg-3)", width: 32, flexShrink: 0, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+            <span
+              style={{
+                fontSize: 9,
+                color: "var(--fg-3)",
+                width: 32,
+                flexShrink: 0,
+                textTransform: "uppercase",
+                letterSpacing: "0.07em",
+              }}
+            >
               {SLEEP_LABEL[stage]}
             </span>
-            <div style={{ flex: 1, height: 8, background: "var(--bg-3)", borderRadius: 4, overflow: "hidden" }}>
-              <div style={{ width: `${pct}%`, height: "100%", background: SLEEP_COLOR[stage], borderRadius: 4 }} />
+            <div
+              style={{
+                flex: 1,
+                height: 8,
+                background: "var(--bg-3)",
+                borderRadius: 4,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${(s / durationS) * 100}%`,
+                  height: "100%",
+                  background: SLEEP_COLOR[stage],
+                  borderRadius: 4,
+                }}
+              />
             </div>
           </div>
         );
@@ -236,57 +251,178 @@ function SleepTotalsBar({
   );
 }
 
+// ─── lollipop chart (CSS — no SVG distortion) ─────────────────────────────
+
 function LollipopChart({ data }: { data: (number | null)[] }) {
   const vals = data.filter((v): v is number => v !== null);
-  if (!vals.length) return <div className="empty-card rounded" style={{ height: 72 }} />;
+  if (!vals.length) return <div className="empty-card rounded" style={{ height: 100 }} />;
 
-  const W = 400;
-  const H = 72;
-  const padT = 6;
-  const padB = 4;
-  const plotH = H - padT - padB;
-  const scaleMin = 0;
-  const scaleMax = Math.max(10, ...vals);
-  const toY = (h: number) => padT + plotH * (1 - (h - scaleMin) / (scaleMax - scaleMin));
-  const n = data.length;
+  const scaleMin = 4;
+  const scaleMax = 10;
+  const chartH = 84;
+  const toH = (v: number) =>
+    ((Math.min(Math.max(v, scaleMin), scaleMax) - scaleMin) / (scaleMax - scaleMin)) * chartH;
 
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      preserveAspectRatio="none"
-      style={{ width: "100%", height: 72, display: "block" }}
-      aria-hidden="true"
-    >
-      <line
-        x1={0}
-        y1={toY(8)}
-        x2={W}
-        y2={toY(8)}
-        stroke="var(--line)"
-        strokeWidth={1}
-        strokeDasharray="3 3"
-      />
-      {data.map((v, i) => {
-        if (v === null) return null;
-        const x = ((i + 0.5) / n) * W;
-        const y = toY(v);
-        const color = v >= 7 && v <= 9 ? "var(--violet)" : v < 6 ? "var(--z4)" : "var(--z3)";
-        return (
-          <g key={x.toFixed(2)}>
-            <line
-              x1={x}
-              y1={H - padB}
-              x2={x}
-              y2={y + 3}
-              stroke={color}
-              strokeWidth={1.5}
-              strokeOpacity={0.45}
-            />
-            <circle cx={x} cy={y} r={3} fill={color} />
-          </g>
-        );
-      })}
-    </svg>
+    <div style={{ position: "relative", paddingBottom: 14 }}>
+      {/* Y-axis labels + reference lines */}
+      {[6, 7, 8, 9].map((h) => (
+        <div
+          key={h}
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 14 + toH(h),
+            display: "flex",
+            alignItems: "center",
+            pointerEvents: "none",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 8,
+              color: "var(--fg-3)",
+              fontFamily: "var(--font-mono)",
+              width: 20,
+              textAlign: "right",
+              flexShrink: 0,
+            }}
+          >
+            {h}h
+          </span>
+          <div
+            style={{
+              flex: 1,
+              height: 0,
+              borderTop: `1px ${h === 8 ? "dashed" : "dotted"} var(--line)`,
+              opacity: h === 8 ? 1 : 0.6,
+              marginLeft: 4,
+            }}
+          />
+        </div>
+      ))}
+
+      {/* Lollipops */}
+      <div style={{ marginLeft: 26, display: "flex", alignItems: "flex-end", height: chartH }}>
+        {data.map((v, i) => {
+          const x = ((i + 0.5) / data.length) * 100;
+          if (v === null) return <div key={x.toFixed(2)} style={{ flex: 1 }} />;
+          const h = toH(v);
+          const color =
+            v >= 7 && v <= 9
+              ? "var(--violet)"
+              : v < 6
+                ? "var(--z5)"
+                : v < 7
+                  ? "var(--z4)"
+                  : "var(--solar)";
+          return (
+            <div
+              key={x.toFixed(2)}
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "flex-end",
+              }}
+            >
+              <div
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: color,
+                  flexShrink: 0,
+                  position: "relative",
+                  zIndex: 1,
+                }}
+              />
+              <div
+                style={{
+                  width: 1.5,
+                  height: Math.max(0, h - 5),
+                  background: color,
+                  opacity: 0.45,
+                  flexShrink: 0,
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* "today" label */}
+      <div style={{ marginLeft: 26, display: "flex", justifyContent: "flex-end" }}>
+        <span style={{ fontSize: 8, color: "var(--fg-3)", fontFamily: "var(--font-mono)" }}>
+          today
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── stress today ────────────────────────────────────────────────────────────
+
+function StressToday({
+  restS,
+  lowS,
+  medS,
+  highS,
+}: { restS: number; lowS: number; medS: number; highS: number }) {
+  const total = restS + lowS + medS + highS;
+  if (!total) return null;
+  const segments = [
+    { label: "REST", s: restS, color: "var(--lime)" },
+    { label: "LOW", s: lowS, color: "var(--solar)" },
+    { label: "MED", s: medS, color: "var(--tangerine)" },
+    { label: "HIGH", s: highS, color: "var(--z5)" },
+  ];
+  // Time axis: 00h 06h 12h 18h 24h at ¼ intervals of a full 86400s day
+  const dayS = 86400;
+  const timeMarks = [0, 6, 12, 18, 24];
+
+  return (
+    <>
+      {/* Segmented bar */}
+      <div style={{ display: "flex", borderRadius: 6, overflow: "hidden", height: 24 }}>
+        {segments.map(({ label, s, color }) =>
+          s > 0 ? <div key={label} style={{ flex: s, background: color }} /> : null
+        )}
+        {/* Remaining unfilled day */}
+        {total < dayS && <div style={{ flex: dayS - total, background: "var(--bg-3)" }} />}
+      </div>
+
+      {/* Time axis */}
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+        {timeMarks.map((h) => (
+          <span
+            key={h}
+            style={{ fontSize: 9, color: "var(--fg-3)", fontFamily: "var(--font-mono)" }}
+          >
+            {String(h).padStart(2, "0")}h
+          </span>
+        ))}
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-2 mt-3">
+        {segments.map(({ label, s, color }) => (
+          <div key={label}>
+            <div
+              className="text-[10px] uppercase tracking-[0.07em]"
+              style={{ color: "var(--fg-3)" }}
+            >
+              {label}
+            </div>
+            <div className="text-[17px] font-[550] tracking-[-0.03em] num" style={{ color }}>
+              {fmtHr(s)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -395,30 +531,25 @@ export function HealthView() {
 
         {data && (
           <>
-            {/* ── Top row: Last Night + Body Battery ───────────────── */}
+            {/* ── Top row: Last Night + Body Battery ── */}
             <div className="grid gap-3" style={{ gridTemplateColumns: "3fr 2fr" }}>
               {/* LAST NIGHT */}
               {data.lastNight ? (
                 <div className="card">
-                  <div className="flex items-start justify-between" style={{ marginBottom: 4 }}>
+                  {/* Header: title left, score+time right */}
+                  <div className="flex items-start justify-between" style={{ marginBottom: 12 }}>
                     <h3 style={{ margin: 0 }}>Last Night · {fmtHr(data.lastNight.durationS)}</h3>
-                    <div
-                      className="text-[11px] font-medium px-2 py-0.5 rounded-md"
-                      style={{
-                        background: "color-mix(in oklch, var(--violet) 18%, var(--bg-2))",
-                        color: "var(--violet)",
-                        border: "1px solid color-mix(in oklch, var(--violet) 35%, var(--line))",
-                        flexShrink: 0,
-                      }}
-                    >
-                      Score {data.lastNight.score} · {data.lastNight.scoreLabel}
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div className="text-[11px] font-medium" style={{ color: "var(--violet)" }}>
+                        Score {data.lastNight.score} · {data.lastNight.scoreLabel}
+                      </div>
+                      <div className="text-[11px] font-mono" style={{ color: "var(--fg-2)" }}>
+                        {data.lastNight.bedTimeLocal} → {data.lastNight.wakeTimeLocal}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="text-[12px] font-mono text-fg-2 mb-4">
-                    {data.lastNight.bedTimeLocal} → {data.lastNight.wakeTimeLocal}
-                  </div>
-
+                  {/* Hypnogram or fallback */}
                   {(data.lastNight.segments ?? []).length > 0 ? (
                     <SleepHypnogram
                       segments={data.lastNight.segments}
@@ -440,38 +571,28 @@ export function HealthView() {
                     />
                   )}
 
-                  {/* Stage totals */}
+                  {/* Stage totals — values in neutral fg-0, not stage colors */}
                   <div className="grid grid-cols-4 gap-3 mt-4">
                     {(
                       [
-                        { key: "deepS" as const, stage: 3, label: "Deep" },
-                        { key: "remS" as const, stage: 2, label: "REM" },
-                        { key: "lightS" as const, stage: 1, label: "Light" },
-                        { key: "awakeS" as const, stage: 0, label: "Awake" },
+                        { key: "deepS", label: "Deep" },
+                        { key: "remS", label: "REM" },
+                        { key: "lightS", label: "Light" },
+                        { key: "awakeS", label: "Awake" },
                       ] as const
-                    ).map(({ key, stage, label }) => {
+                    ).map(({ key, label }) => {
                       const s = (data.lastNight?.totals?.[key] ?? 0) as number;
-                      const pct =
-                        data.lastNight?.durationS > 0
-                          ? Math.round((s / data.lastNight?.durationS) * 100)
-                          : 0;
+                      const dur = data.lastNight?.durationS ?? 0;
+                      const pct = dur > 0 ? Math.round((s / dur) * 100) : 0;
                       return (
                         <div key={key}>
-                          <div
-                            className="text-[10px] uppercase tracking-[0.08em] mb-0.5"
-                            style={{ color: "var(--fg-3)" }}
-                          >
+                          <div className="text-[10px] uppercase tracking-[0.08em] mb-0.5 text-fg-3">
                             {label}
                           </div>
-                          <div
-                            className="text-[20px] font-[550] tracking-[-0.03em] num"
-                            style={{ color: SLEEP_COLOR[stage] }}
-                          >
+                          <div className="text-[20px] font-[550] tracking-[-0.03em] num text-fg-0">
                             {fmtStageDuration(s)}
                           </div>
-                          <div className="text-[11px] num" style={{ color: "var(--fg-2)" }}>
-                            {pct}%
-                          </div>
+                          <div className="text-[11px] num text-fg-2">{pct}%</div>
                         </div>
                       );
                     })}
@@ -485,7 +606,7 @@ export function HealthView() {
 
               {/* BODY BATTERY */}
               <div className="card flex flex-col">
-                <h3>Body Battery</h3>
+                <h3>Body Battery · 24H</h3>
                 {lastNonNull(data.series.bodyBattery) !== null ? (
                   <>
                     <div className="flex items-baseline gap-1 mb-3">
@@ -511,13 +632,13 @@ export function HealthView() {
               </div>
             </div>
 
-            {/* ── Middle row: 4 metric cards ───────────────────────── */}
+            {/* ── Middle row: 4 metric cards ── */}
             <div className="grid grid-cols-4 gap-3">
               {(
                 [
                   {
                     title: "HRV · Nightly",
-                    key: "hrv" as const,
+                    key: "hrv",
                     unit: "ms",
                     color: "var(--violet)",
                     gradId: "grad-hrv",
@@ -526,23 +647,23 @@ export function HealthView() {
                   },
                   {
                     title: "Resting HR",
-                    key: "rhr" as const,
+                    key: "rhr",
                     unit: "bpm",
-                    color: "var(--cyan)",
+                    color: "var(--lime)",
                     gradId: "grad-rhr",
                     higherIsBetter: false,
                   },
                   {
                     title: "Stress · Avg",
-                    key: "stress" as const,
+                    key: "stress",
                     unit: "/100",
-                    color: "var(--tangerine)",
+                    color: "var(--cyan)",
                     gradId: "grad-stress",
                     higherIsBetter: false,
                   },
                   {
                     title: "SpO₂ · Sleep",
-                    key: "spo2" as const,
+                    key: "spo2",
                     unit: "%",
                     color: "var(--solar)",
                     gradId: "grad-spo2",
@@ -559,7 +680,6 @@ export function HealthView() {
                     : current !== null && avg !== null
                       ? current - avg
                       : null;
-
                 const stressLabel =
                   m.key === "stress" && current !== null
                     ? current < 25
@@ -570,7 +690,14 @@ export function HealthView() {
                           ? "high"
                           : "very high"
                     : undefined;
-
+                const spo2Label =
+                  m.key === "spo2" && current !== null
+                    ? current >= 95
+                      ? "stable"
+                      : current >= 90
+                        ? "low"
+                        : "very low"
+                    : undefined;
                 return (
                   <MetricCard
                     key={m.title}
@@ -579,7 +706,7 @@ export function HealthView() {
                     unit={m.unit}
                     delta={delta}
                     higherIsBetter={m.higherIsBetter}
-                    secondaryLabel={stressLabel}
+                    secondaryLabel={stressLabel ?? spo2Label}
                     series={series}
                     color={m.color}
                     gradId={m.gradId}
@@ -589,10 +716,21 @@ export function HealthView() {
               })}
             </div>
 
-            {/* ── Bottom: Sleep duration & consistency ─────────────── */}
-            <div className="card">
-              <h3>Sleep · Duration &amp; Consistency</h3>
-              <LollipopChart data={data.series.sleepHours} />
+            {/* ── Bottom: Sleep + Stress Today ── */}
+            <div
+              className="grid gap-3"
+              style={{ gridTemplateColumns: data.stressToday ? "3fr 2fr" : "1fr" }}
+            >
+              <div className="card">
+                <h3>Sleep · Duration &amp; Consistency</h3>
+                <LollipopChart data={data.series.sleepHours} />
+              </div>
+              {data.stressToday && (
+                <div className="card">
+                  <h3>Stress Today</h3>
+                  <StressToday {...data.stressToday} />
+                </div>
+              )}
             </div>
           </>
         )}
