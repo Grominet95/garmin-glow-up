@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from datetime import date, datetime, timedelta, timezone
 
@@ -132,6 +133,18 @@ def _pull_day(client: GarminClient, db: Session, d: date, date_str: str) -> None
                 # No readings: clear stale value so dashboard falls back to previous day
                 metric.body_battery_high = None
                 metric.body_battery_charged = entry.get("charged") or metric.body_battery_charged
+
+            # Store intraday series as [[minute_of_day, level], ...] for 24H chart
+            intraday_pts: list[list[int]] = []
+            for row in values_array:
+                if len(row) > level_idx and row[level_idx] is not None and row[level_idx] >= 0:
+                    ts_ms = row[0]
+                    level_val = row[level_idx]
+                    local_dt = datetime.fromtimestamp(ts_ms / 1000)
+                    minute_of_day = local_dt.hour * 60 + local_dt.minute
+                    intraday_pts.append([minute_of_day, level_val])
+            if intraday_pts:
+                metric.body_battery_intraday = json.dumps(intraday_pts)
     except Exception as e:
         logger.debug("Body battery fetch error: %s", e)
 
