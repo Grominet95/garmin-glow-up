@@ -110,6 +110,8 @@ class SplitOut(BaseModel):
     cad: int
     elevDelta: float
     zone: int
+    durationS: int
+    tOffsetS: int
 
 
 class ZoneRowOut(BaseModel):
@@ -275,6 +277,8 @@ def get_activity(_token: TokenDep, db: DbDep, activity_id: int):
             cad=cad or 0,
             elevDelta=(lap.elev_gain_m or 0) - (lap.elev_loss_m or 0),
             zone=lap.hr_zone or 2,
+            durationS=int(lap.duration_s or 0),
+            tOffsetS=t0,
         ))
 
     # Dynamics aggregation from stream (vertical_osc_cm stored in mm → divide by 10 for cm)

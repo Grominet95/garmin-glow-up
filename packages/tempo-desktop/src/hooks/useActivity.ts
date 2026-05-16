@@ -34,6 +34,8 @@ export interface ActivityDetailResponse {
     cad: number;
     elevDelta: number;
     zone: number;
+    durationS: number;
+    tOffsetS: number;
   }>;
   zones: Array<{ z: number; label: string; pct: number; min: number; max: number }>;
   hrSummary: { avg: number; max: number; hrrPct: number };

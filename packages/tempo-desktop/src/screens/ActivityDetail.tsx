@@ -24,6 +24,15 @@ function fmtPace(secPerKm: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+function fmtDuration(sec: number): string {
+  if (!Number.isFinite(sec) || sec < 0) return "--";
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.round(sec % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 // Build a local SVG path within a track (y=0 at top, y=trackH at bottom).
 // Handles null gaps by lifting the pen.
 function pathFromSeries(
@@ -88,8 +97,14 @@ function parsePolyline(json: string): [number, number][] {
 }
 
 // Project decoded [lat,lng] points to an SVG path, auto-fitting to the viewBox.
-function polylineToSvgPath(pts: [number, number][], svgW: number, svgH: number, pad = 20): string {
-  if (pts.length === 0) return "";
+// Returns the path string plus the SVG coords of the first and last point.
+function polylineToSvgPath(
+  pts: [number, number][],
+  svgW: number,
+  svgH: number,
+  pad = 20,
+): { d: string; start: [number, number]; end: [number, number] } {
+  if (pts.length === 0) return { d: "", start: [0, 0], end: [0, 0] };
   const lats = pts.map((p) => p[0]);
   const lngs = pts.map((p) => p[1]);
   const minLat = Math.min(...lats);
@@ -100,17 +115,20 @@ function polylineToSvgPath(pts: [number, number][], svgW: number, svgH: number, 
   const rangeH = maxLat - minLat || 1e-6;
   const drawW = svgW - 2 * pad;
   const drawH = svgH - 2 * pad;
-  // Keep aspect ratio
   const scale = Math.min(drawW / rangeW, drawH / rangeH);
   const offX = pad + (drawW - rangeW * scale) / 2;
   const offY = pad + (drawH - rangeH * scale) / 2;
-  return pts
-    .map(([lat, lng], idx) => {
-      const x = offX + (lng - minLng) * scale;
-      const y = offY + (maxLat - lat) * scale; // flip y: north = up
+  const project = ([lat, lng]: [number, number]): [number, number] => [
+    offX + (lng - minLng) * scale,
+    offY + (maxLat - lat) * scale,
+  ];
+  const d = pts
+    .map((pt, idx) => {
+      const [x, y] = project(pt);
       return `${idx === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
     })
     .join(" ");
+  return { d, start: project(pts[0]), end: project(pts[pts.length - 1]) };
 }
 
 // Human-readable training effect label from raw Garmin string
@@ -254,6 +272,7 @@ export function ActivityDetail({ id }: Props) {
   const { data, isLoading, error } = useActivity(id);
   const containerRef = useRef<HTMLDivElement>(null);
   const [cursorPct, setCursorPct] = useState(0.61);
+  const [selectedLaps, setSelectedLaps] = useState<Set<number>>(new Set());
 
   if (isLoading) {
     return (
@@ -375,11 +394,52 @@ export function ActivityDetail({ id }: Props) {
   // Map path: decode real GPS polyline if available, else decorative fallback
   const FALLBACK_PATH =
     "M58 200 C 70 160, 110 130, 150 145 S 220 200, 250 175 S 305 110, 360 95 S 440 90, 460 130 S 470 220, 430 245 S 340 270, 290 245 S 200 230, 160 250 S 90 255, 58 200 Z";
-  const routePath = mapInfo?.polyline
-    ? polylineToSvgPath(parsePolyline(mapInfo.polyline), 520, 286, 52)
-    : FALLBACK_PATH;
+  const routeData = mapInfo?.polyline
+    ? polylineToSvgPath(parsePolyline(mapInfo.polyline), 520, 286, 72)
+    : null;
+  const routePath = routeData?.d ?? FALLBACK_PATH;
+  const routeStart = routeData?.start ?? null;
+  const routeEnd = routeData?.end ?? null;
 
-  const tickCount = splits.length;
+  const onLapClick = (idx: number, multi = false) => {
+    setSelectedLaps((prev) => {
+      const next = new Set(prev);
+      if (multi) {
+        if (next.has(idx)) next.delete(idx);
+        else next.add(idx);
+      } else {
+        if (next.size === 1 && next.has(idx)) next.clear();
+        else {
+          next.clear();
+          next.add(idx);
+        }
+      }
+      return next;
+    });
+  };
+
+  const selArr = splits.filter((_, i) => selectedLaps.has(i));
+  const selDist = selArr.reduce((a, s) => a + s.distanceM, 0);
+  const selTime = selArr.reduce((a, s) => a + (s.durationS || 0), 0);
+  const selAvgPace = selDist > 0 && selTime > 0 ? selTime / (selDist / 1000) : 0;
+  const hrLaps = selArr.filter((s) => s.hr > 0);
+  const hrDurTotal = hrLaps.reduce((a, s) => a + (s.durationS || 0), 0);
+  const selAvgHR =
+    hrLaps.length > 0
+      ? hrDurTotal > 0
+        ? hrLaps.reduce((a, s) => a + s.hr * (s.durationS || 0), 0) / hrDurTotal
+        : hrLaps.reduce((a, s) => a + s.hr, 0) / hrLaps.length
+      : 0;
+  const cadLaps = selArr.filter((s) => s.cad > 0);
+  const cadDurTotal = cadLaps.reduce((a, s) => a + (s.durationS || 0), 0);
+  const selAvgCad =
+    cadLaps.length > 0
+      ? cadDurTotal > 0
+        ? cadLaps.reduce((a, s) => a + s.cad * (s.durationS || 0), 0) / cadDurTotal
+        : cadLaps.reduce((a, s) => a + s.cad, 0) / cadLaps.length
+      : 0;
+  const selElevGain = selArr.reduce((a, s) => a + Math.max(0, s.elevDelta), 0);
+  const selElevLoss = selArr.reduce((a, s) => a + Math.max(0, -s.elevDelta), 0);
 
   return (
     <div
@@ -408,7 +468,7 @@ export function ActivityDetail({ id }: Props) {
       />
 
       <div
-        className="flex-1 overflow-hidden p-5"
+        className="flex-1 overflow-y-auto p-5"
         style={{ display: "flex", flexDirection: "column", gap: 14 }}
       >
         {/* Hero stat strip — 8-column grid */}
@@ -469,7 +529,7 @@ export function ActivityDetail({ id }: Props) {
         </div>
 
         {/* Map + Chart row */}
-        <div style={{ display: "grid", gridTemplateColumns: "440px 1fr", gap: 14, flex: "1 1 0", minHeight: 0 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "440px 1fr", gap: 14, height: 320 }}>
           {/* MAP card */}
           <div
             className="card"
@@ -547,30 +607,20 @@ export function ActivityDetail({ id }: Props) {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                {splits.map((s, i) => {
-                  const angle = (i / splits.length) * Math.PI * 2 - Math.PI / 2;
-                  const cx = 260 + Math.cos(angle) * 175;
-                  const cy = 170 + Math.sin(angle) * 75;
-                  return (
-                    <circle
-                      key={s.k}
-                      cx={cx}
-                      cy={cy}
-                      r="2"
-                      fill="var(--bg-0)"
-                      stroke={accent}
-                      strokeWidth="1.2"
-                    />
-                  );
-                })}
-                <circle cx="430" cy="245" r="14" fill={accent} opacity="0.18" />
-                <circle cx="430" cy="245" r="5" fill={accent} />
-                <circle cx="430" cy="245" r="2.5" fill="var(--bg-0)" />
-                <g fontFamily="var(--font-mono)" fontSize="10" fill="var(--fg-1)">
-                  <text x="70" y="195">
-                    START
-                  </text>
-                </g>
+                {routeEnd && (
+                  <>
+                    <circle cx={routeEnd[0]} cy={routeEnd[1]} r="14" fill={accent} opacity="0.18" />
+                    <circle cx={routeEnd[0]} cy={routeEnd[1]} r="5" fill={accent} />
+                    <circle cx={routeEnd[0]} cy={routeEnd[1]} r="2.5" fill="var(--bg-0)" />
+                  </>
+                )}
+                {routeStart && (
+                  <g fontFamily="var(--font-mono)" fontSize="10" fill="var(--fg-1)">
+                    <text x={routeStart[0] + 6} y={routeStart[1] - 6}>
+                      START
+                    </text>
+                  </g>
+                )}
               </svg>
             </div>
             {mapInfo && (
@@ -619,7 +669,14 @@ export function ActivityDetail({ id }: Props) {
           <div
             className="card"
             ref={containerRef}
-            style={{ padding: "12px 14px", height: "100%", overflow: "hidden", cursor: "crosshair", display: "flex", flexDirection: "column" }}
+            style={{
+              padding: "12px 14px",
+              height: "100%",
+              overflow: "hidden",
+              cursor: "crosshair",
+              display: "flex",
+              flexDirection: "column",
+            }}
             onMouseMove={onChartMove}
           >
             <div style={{ display: "flex", alignItems: "center", marginBottom: 6, flexShrink: 0 }}>
@@ -706,6 +763,24 @@ export function ActivityDetail({ id }: Props) {
                   </g>
                 );
               })}
+              {/* Selected lap highlight bands */}
+              {[...selectedLaps].map((lapIdx) => {
+                const s = splits[lapIdx];
+                if (!s || !totalSec) return null;
+                const bx = (s.tOffsetS / totalSec) * CHART_W;
+                const bw = (s.durationS / totalSec) * CHART_W;
+                return (
+                  <rect
+                    key={lapIdx}
+                    x={bx}
+                    y={0}
+                    width={Math.max(1, bw)}
+                    height={chartH}
+                    fill={accent}
+                    opacity="0.12"
+                  />
+                );
+              })}
               {/* Cursor line */}
               <line
                 x1={cursorX}
@@ -760,11 +835,22 @@ export function ActivityDetail({ id }: Props) {
           </div>
         </div>
 
-        {/* Splits — barcode of effort */}
+        {/* Splits — barcode of effort + interactive table */}
         {splits.length > 0 && (
           <div className="card" style={{ padding: "12px 14px" }}>
-            <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
               <h3 style={{ margin: 0 }}>Splits</h3>
+              <span
+                style={{
+                  marginLeft: 10,
+                  fontSize: 10,
+                  color: "var(--fg-3)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              >
+                click · ⌘-click multi
+              </span>
               <div
                 style={{
                   marginLeft: "auto",
@@ -795,61 +881,215 @@ export function ActivityDetail({ id }: Props) {
                 </div>
               </div>
             </div>
+
+            {/* Barcode — clickable */}
             <svg
               width="100%"
-              height="140"
-              viewBox="0 0 1140 140"
+              height="80"
+              viewBox="0 0 1140 80"
               preserveAspectRatio="none"
               role="img"
               aria-label="Splits bar chart"
+              style={{ display: "block", marginBottom: 8 }}
             >
               {splits.map((s, si) => {
                 const w = 1140 / splits.length;
                 const x = si * w;
                 const norm = maxPace > minPace ? 1 - (s.pace - minPace) / (maxPace - minPace) : 0.5;
-                const h = 14 + norm * 70;
-                const y = 102 - h;
+                const h = 12 + norm * 46;
+                const y = 60 - h;
+                const isSel = selectedLaps.has(si);
                 return (
-                  <g key={s.k}>
+                  <g
+                    key={s.k}
+                    style={{ cursor: "pointer" }}
+                    onClick={(e) => onLapClick(si, e.metaKey || e.ctrlKey || e.shiftKey)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") onLapClick(si, e.shiftKey);
+                    }}
+                  >
+                    {/* invisible hit area */}
+                    <rect x={x} y={0} width={w} height={80} fill="transparent" />
                     <rect
-                      x={x + 4}
+                      x={x + 3}
                       y={y}
-                      width={w - 8}
+                      width={Math.max(1, w - 6)}
                       height={h}
                       fill={zoneColor(s.zone)}
                       rx="2"
+                      opacity={isSel ? 1 : selectedLaps.size > 0 ? 0.35 : 0.8}
                     />
+                    {isSel && (
+                      <rect
+                        x={x + 2}
+                        y={y - 1}
+                        width={Math.max(1, w - 4)}
+                        height={h + 2}
+                        fill="none"
+                        stroke="var(--fg-0)"
+                        strokeWidth="1"
+                        rx="2"
+                        opacity="0.5"
+                      />
+                    )}
                     <text
                       x={x + w / 2}
-                      y={y - 4}
+                      y="75"
                       textAnchor="middle"
                       fontFamily="var(--font-mono)"
-                      fontSize="10"
-                      fill="var(--fg-1)"
-                    >
-                      {s.paceDisplay}
-                    </text>
-                    <text
-                      x={x + w / 2}
-                      y="118"
-                      textAnchor="middle"
-                      fontFamily="var(--font-mono)"
-                      fontSize="9"
-                      fill="var(--fg-2)"
+                      fontSize="8"
+                      fill={isSel ? "var(--fg-0)" : "var(--fg-3)"}
                     >
                       {s.k}
                     </text>
-                    <rect
-                      x={x + w / 2 - 1}
-                      y={126}
-                      width="2"
-                      height={Math.max(2, Math.abs(s.elevDelta) * 0.4)}
-                      fill={s.elevDelta >= 0 ? "var(--fg-2)" : "var(--fg-3)"}
-                    />
                   </g>
                 );
               })}
             </svg>
+
+            {/* Lap table */}
+            <div style={{ overflow: "auto", maxHeight: 240 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "28px 1fr 1fr 1fr 1fr 1fr 1fr",
+                  gap: "0 8px",
+                  padding: "3px 8px",
+                  fontSize: 9.5,
+                  color: "var(--fg-3)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  fontFamily: "var(--font-mono)",
+                  borderBottom: "1px solid var(--line-soft)",
+                  marginBottom: 2,
+                }}
+              >
+                <span>#</span>
+                <span>Dist</span>
+                <span>Time</span>
+                <span>Pace</span>
+                <span>HR</span>
+                <span>Cad</span>
+                <span>Elev ±</span>
+              </div>
+              {splits.map((s, si) => {
+                const isSel = selectedLaps.has(si);
+                return (
+                  <button
+                    key={s.k}
+                    type="button"
+                    onClick={(e) => onLapClick(si, e.metaKey || e.ctrlKey || e.shiftKey)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") onLapClick(si, e.shiftKey);
+                    }}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "28px 1fr 1fr 1fr 1fr 1fr 1fr",
+                      gap: "0 8px",
+                      padding: "5px 8px",
+                      cursor: "pointer",
+                      borderRadius: 4,
+                      borderLeft: isSel ? `2px solid ${accent}` : "2px solid transparent",
+                      borderTop: "none",
+                      borderRight: "none",
+                      borderBottom: "none",
+                      background: isSel ? "var(--bg-2)" : "transparent",
+                      width: "100%",
+                      textAlign: "left",
+                      fontSize: 11.5,
+                      fontFamily: "var(--font-mono)",
+                      color: isSel ? "var(--fg-0)" : "var(--fg-1)",
+                    }}
+                  >
+                    <span style={{ color: isSel ? accent : "var(--fg-2)" }}>{s.k}</span>
+                    <span>{(s.distanceM / 1000).toFixed(2)} km</span>
+                    <span>{fmtDuration(s.durationS)}</span>
+                    <span style={{ color: isSel ? accent : undefined }}>{s.paceDisplay}</span>
+                    <span>{s.hr > 0 ? `${s.hr} bpm` : "—"}</span>
+                    <span>{s.cad > 0 ? `${s.cad} spm` : "—"}</span>
+                    <span
+                      style={{
+                        color:
+                          s.elevDelta > 1
+                            ? "var(--fg-1)"
+                            : s.elevDelta < -1
+                              ? "var(--fg-2)"
+                              : "var(--fg-3)",
+                      }}
+                    >
+                      {s.elevDelta >= 0 ? "+" : ""}
+                      {Math.round(s.elevDelta)} m
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Selection summary */}
+            {selectedLaps.size > 0 && (
+              <div
+                style={{
+                  borderTop: "1px solid var(--line-soft)",
+                  paddingTop: 10,
+                  marginTop: 8,
+                  display: "flex",
+                  gap: 24,
+                  alignItems: "flex-start",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: "var(--fg-2)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    paddingTop: 4,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {selectedLaps.size} lap{selectedLaps.size > 1 ? "s" : ""}
+                </div>
+                {[
+                  { label: "Dist", value: (selDist / 1000).toFixed(2), unit: "km" },
+                  { label: "Time", value: fmtDuration(selTime), unit: "" },
+                  { label: "Pace", value: fmtPace(selAvgPace), unit: "/km" },
+                  { label: "HR", value: selAvgHR > 0 ? String(Math.round(selAvgHR)) : "—", unit: selAvgHR > 0 ? "bpm" : "" },
+                  ...(selAvgCad > 0
+                    ? [{ label: "Cad", value: String(Math.round(selAvgCad)), unit: "spm" }]
+                    : []),
+                  { label: "Gain", value: `+${Math.round(selElevGain)}`, unit: "m" },
+                  ...(selElevLoss > 1
+                    ? [{ label: "Loss", value: `-${Math.round(selElevLoss)}`, unit: "m" }]
+                    : []),
+                ].map(({ label, value, unit }) => (
+                  <div key={label}>
+                    <div
+                      style={{
+                        fontSize: 9.5,
+                        color: "var(--fg-3)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.06em",
+                        marginBottom: 1,
+                      }}
+                    >
+                      {label}
+                    </div>
+                    <span
+                      className="num"
+                      style={{ fontSize: 17, fontWeight: 550, color: "var(--fg-0)" }}
+                    >
+                      {value}
+                    </span>
+                    {unit && (
+                      <span style={{ fontSize: 10, color: "var(--fg-2)", marginLeft: 2 }}>
+                        {unit}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
