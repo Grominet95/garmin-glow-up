@@ -114,7 +114,7 @@ function MapCard({ sport, routePolyline }: { sport: string; routePolyline: strin
     <div
       style={{
         background: "radial-gradient(60% 100% at 60% 40%, #1a1e1a, #0e1014)",
-        width: 180,
+        width: 300,
         flexShrink: 0,
         position: "relative",
         overflow: "hidden",
@@ -476,7 +476,7 @@ export function Dashboard() {
               >
                 <div className="card" style={{ padding: 0, overflow: "hidden", height: "100%" }}>
                   <div
-                    style={{ display: "grid", gridTemplateColumns: "180px 1fr", height: "100%" }}
+                    style={{ display: "grid", gridTemplateColumns: "300px 1fr", height: "100%" }}
                   >
                     <MapCard
                       sport={lastSession.sport}
