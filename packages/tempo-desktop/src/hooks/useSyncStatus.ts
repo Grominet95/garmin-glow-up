@@ -58,13 +58,15 @@ export function useSyncStatus() {
     return disconnect;
   }, [ready, setStatus, setMfaRequired, qc]);
 
-  const triggerSync = async () => {
+  const triggerSync = async (days = 365) => {
     await api("/sync/run", {
       method: "POST",
-      body: JSON.stringify({ force: false }),
+      body: JSON.stringify({ force: false, days }),
       headers: { "Content-Type": "application/json" },
     });
   };
 
-  return { ...store, triggerSync };
+  const triggerQuickSync = () => triggerSync(7);
+
+  return { ...store, triggerSync, triggerQuickSync };
 }

@@ -11,7 +11,7 @@ from tempo_sync.garmin.client import GarminClient
 logger = logging.getLogger(__name__)
 
 
-def pull_progress(client: GarminClient, db: Session) -> None:
+def pull_progress(client: GarminClient, db: Session, full: bool = True) -> None:
     today = date.today()
 
     # ── Personal Records ──────────────────────────────────────────────────────
@@ -50,10 +50,11 @@ def pull_progress(client: GarminClient, db: Session) -> None:
         logger.warning("Race predictions failed: %s", e)
 
     # ── VO2max history (monthly snapshots for last 24 months) ─────────────────
-    try:
-        _pull_vo2max_history(client, db, today)
-    except Exception as e:
-        logger.warning("VO2max history pull failed: %s", e)
+    if full:
+        try:
+            _pull_vo2max_history(client, db, today)
+        except Exception as e:
+            logger.warning("VO2max history pull failed: %s", e)
 
 
 def _pull_vo2max_history(client: GarminClient, db: Session, today: date) -> None:

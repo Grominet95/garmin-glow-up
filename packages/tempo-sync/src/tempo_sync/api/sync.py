@@ -21,6 +21,7 @@ _subscribers: set[asyncio.Queue] = set()
 class SyncRunRequest(BaseModel):
     force: bool = False
     scope: list[str] = ["activities", "health", "load", "progress"]
+    days: int = 365
 
 
 def _current_status() -> dict:
@@ -70,17 +71,17 @@ async def run_sync(_token: TokenDep, db: DbDep, req: SyncRunRequest):
     db.commit()
     db.refresh(run)
 
-    asyncio.create_task(_do_sync(run.id, req.scope, req.force))
+    asyncio.create_task(_do_sync(run.id, req.scope, req.force, req.days))
     return {"runId": run.id}
 
 
-async def _do_sync(run_id: int, scope: list[str], force: bool = False) -> None:
+async def _do_sync(run_id: int, scope: list[str], force: bool = False, days: int = 365) -> None:
     global _sync_running, _last_sync
     _sync_running = True
     await _broadcast()
     try:
         from tempo_sync.sync.orchestrator import sync_all
-        await asyncio.get_event_loop().run_in_executor(None, lambda: sync_all(scope=scope, force=force))
+        await asyncio.get_event_loop().run_in_executor(None, lambda: sync_all(scope=scope, force=force, days=days))
         _last_sync = datetime.utcnow()
     except Exception:
         pass
