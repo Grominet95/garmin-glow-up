@@ -31,7 +31,7 @@ const SPORT_LABELS: Record<string, string> = {
 const VB_ZERO = 260;
 const VB_SPAN = 242;
 const VB_TSS_BOT = 348;
-const VB_X0 = 40;   // chart left edge
+const VB_X0 = 40; // chart left edge
 const VB_XW = 1090; // chart width  (VB_X0 + VB_XW = 1130 = chart right edge)
 
 function ctlPath(arr: number[], maxV: number): string {
@@ -233,7 +233,10 @@ function PerfChart({ series }: { series: LoadResponse["series"] }) {
   }
 
   return (
-    <div className="card" style={{ display: "flex", flexDirection: "column", padding: "14px 18px" }}>
+    <div
+      className="card"
+      style={{ display: "flex", flexDirection: "column", padding: "14px 18px" }}
+    >
       <div style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
         <h3
           style={{
@@ -257,19 +260,38 @@ function PerfChart({ series }: { series: LoadResponse["series"] }) {
           }}
         >
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-            <span style={{ width: 12, height: 2, background: "var(--run)", display: "inline-block" }} />
+            <span
+              style={{ width: 12, height: 2, background: "var(--run)", display: "inline-block" }}
+            />
             Fitness
           </span>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-            <span style={{ width: 12, height: 0, borderTop: "2px dashed var(--bike)", display: "inline-block" }} />
+            <span
+              style={{
+                width: 12,
+                height: 0,
+                borderTop: "2px dashed var(--bike)",
+                display: "inline-block",
+              }}
+            />
             Fatigue
           </span>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-            <span style={{ width: 12, height: 2, background: "var(--swim)", display: "inline-block" }} />
+            <span
+              style={{ width: 12, height: 2, background: "var(--swim)", display: "inline-block" }}
+            />
             Form
           </span>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-            <span style={{ width: 7, height: 7, background: "var(--fg-3)", borderRadius: 1, display: "inline-block" }} />
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                background: "var(--fg-3)",
+                borderRadius: 1,
+                display: "inline-block",
+              }}
+            />
             Daily load
           </span>
         </div>
@@ -281,16 +303,18 @@ function PerfChart({ series }: { series: LoadResponse["series"] }) {
           - TSS bars fill bottom band (y=260 → y=348)
           - no explicit height → browser intrinsically sizes from aspect ratio (no stretch)
       */}
-      <svg
-        width="100%"
-        viewBox="0 0 1140 370"
-        style={{ display: "block" }}
-        aria-hidden="true"
-      >
+      <svg width="100%" viewBox="0 0 1140 370" style={{ display: "block" }} aria-hidden="true">
         {/* Y-axis grid lines + left-side value labels (inside viewBox margin) */}
         {yTicks.map(({ value, y }) => (
           <g key={y}>
-            <line x1={VB_X0} y1={y} x2={VB_X0 + VB_XW} y2={y} stroke="var(--line-soft)" strokeDasharray="2 4" />
+            <line
+              x1={VB_X0}
+              y1={y}
+              x2={VB_X0 + VB_XW}
+              y2={y}
+              stroke="var(--line-soft)"
+              strokeDasharray="2 4"
+            />
             <text
               x={VB_X0 - 6}
               y={y + 3.5}
@@ -305,19 +329,38 @@ function PerfChart({ series }: { series: LoadResponse["series"] }) {
         ))}
 
         {/* Form (TSB) zero baseline */}
-        <line x1={VB_X0} y1={VB_ZERO} x2={VB_X0 + VB_XW} y2={VB_ZERO} stroke="var(--line)" strokeDasharray="3 3" />
+        <line
+          x1={VB_X0}
+          y1={VB_ZERO}
+          x2={VB_X0 + VB_XW}
+          y2={VB_ZERO}
+          stroke="var(--line)"
+          strokeDasharray="3 3"
+        />
 
         {/* Daily load bars — bottom band */}
         {tsss.map((v, i) => {
           const x = VB_X0 + (i / (n - 1)) * VB_XW;
           const h = (v / maxTss) * 70;
           return (
-            <rect key={x.toFixed(2)} x={x - 1.5} y={VB_TSS_BOT - h} width="3" height={h} fill="var(--fg-3)" opacity="0.55" />
+            <rect
+              key={x.toFixed(2)}
+              x={x - 1.5}
+              y={VB_TSS_BOT - h}
+              width="3"
+              height={h}
+              fill="var(--fg-3)"
+              opacity="0.55"
+            />
           );
         })}
 
         {/* Fitness (CTL) filled area + line */}
-        <path d={`${ctlD} L ${VB_X0 + VB_XW} ${VB_ZERO} L ${VB_X0} ${VB_ZERO} Z`} fill="var(--run)" opacity="0.08" />
+        <path
+          d={`${ctlD} L ${VB_X0 + VB_XW} ${VB_ZERO} L ${VB_X0} ${VB_ZERO} Z`}
+          fill="var(--run)"
+          opacity="0.08"
+        />
         <path d={ctlD} stroke="var(--run)" strokeWidth="2.2" fill="none" />
 
         {/* Fatigue (ATL) dashed line */}
@@ -327,18 +370,44 @@ function PerfChart({ series }: { series: LoadResponse["series"] }) {
         <path d={tsbD} stroke="var(--swim)" strokeWidth="1.5" fill="none" />
 
         {/* "Today" vertical marker */}
-        <line x1={VB_X0 + VB_XW} y1="0" x2={VB_X0 + VB_XW} y2={VB_TSS_BOT} stroke="var(--fg-0)" strokeOpacity="0.3" strokeDasharray="2 3" />
-        <circle cx={VB_X0 + VB_XW} cy={nowY} r="4" fill="var(--bg-0)" stroke="var(--run)" strokeWidth="2" />
+        <line
+          x1={VB_X0 + VB_XW}
+          y1="0"
+          x2={VB_X0 + VB_XW}
+          y2={VB_TSS_BOT}
+          stroke="var(--fg-0)"
+          strokeOpacity="0.3"
+          strokeDasharray="2 3"
+        />
+        <circle
+          cx={VB_X0 + VB_XW}
+          cy={nowY}
+          r="4"
+          fill="var(--bg-0)"
+          stroke="var(--run)"
+          strokeWidth="2"
+        />
 
         {/* X-axis: month tick marks + labels */}
         <g fontFamily="var(--font-mono)" fontSize="9" fill="var(--fg-3)">
           {monthTicks.map(({ x, label }) => (
             <g key={label + x.toFixed(0)}>
-              <line x1={x} y1={VB_TSS_BOT + 2} x2={x} y2={VB_TSS_BOT + 7} stroke="var(--fg-3)" strokeWidth="1" />
-              <text x={x} y={VB_TSS_BOT + 18} textAnchor="middle">{label}</text>
+              <line
+                x1={x}
+                y1={VB_TSS_BOT + 2}
+                x2={x}
+                y2={VB_TSS_BOT + 7}
+                stroke="var(--fg-3)"
+                strokeWidth="1"
+              />
+              <text x={x} y={VB_TSS_BOT + 18} textAnchor="middle">
+                {label}
+              </text>
             </g>
           ))}
-          <text x={VB_X0 + VB_XW} y={VB_TSS_BOT + 18} textAnchor="end" fill="var(--fg-2)">today</text>
+          <text x={VB_X0 + VB_XW} y={VB_TSS_BOT + 18} textAnchor="end" fill="var(--fg-2)">
+            today
+          </text>
         </g>
       </svg>
     </div>
@@ -487,74 +556,81 @@ export function TrainingLoad() {
       <TopBar crumbs={["Library", "Training load", RANGE_LABELS[range]]} right={rangeSelector} />
       <div className="flex-1 overflow-y-auto">
         <div className="p-5 flex flex-col gap-3" style={{ minHeight: "100%" }}>
-        {isLoading &&
-          Array.from({ length: 3 }).map((_, i) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
-            <SkeletonCard key={i} />
-          ))}
+          {isLoading &&
+            Array.from({ length: 3 }).map((_, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
+              <SkeletonCard key={i} />
+            ))}
 
-        {data && (
-          <>
-            {/* 4 metric cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, flexShrink: 0 }}>
-              <BigStat
-                label="Fitness · CTL"
-                value={data.current.ctl.toFixed(0)}
-                delta={ctlDelta}
-                tone="var(--run)"
-                desc="Long-term training load. Builds gradually over months."
-              />
-              <BigStat
-                label="Fatigue · ATL"
-                value={data.current.atl.toFixed(0)}
-                delta={atlDelta}
-                tone="var(--bike)"
-                desc="Short-term stress. Rises fast after hard sessions."
-              />
-              <BigStat
-                label="Form · TSB"
-                value={
-                  data.current.tsb > 0
-                    ? `+${data.current.tsb.toFixed(0)}`
-                    : data.current.tsb.toFixed(0)
-                }
-                delta={tsbDelta}
-                tone="var(--swim)"
-                desc="Freshness = Fitness − Fatigue. Positive means ready to race."
-              />
-              <RampCard rampPerWeek={rampPerWeek} />
-            </div>
-
-            {/* Performance Management chart */}
-            <PerfChart series={data.series} />
-
-            {/* Weekly Volume by Sport */}
-            <WeeklyVolume weekly={data.weekly} />
-
-            {/* Recommendations */}
-            {data.recommendations.length > 0 && (
-              <div className="space-y-2" style={{ flexShrink: 0 }}>
-                {data.recommendations.map((r) => (
-                  <div key={r.body} className="card">
-                    <span
-                      className="text-[10px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded-sm mr-2"
-                      style={{
-                        background:
-                          r.kind === "fatigue"
-                            ? "color-mix(in oklch, var(--tangerine) 20%, transparent)"
-                            : "color-mix(in oklch, var(--lime) 20%, transparent)",
-                        color: r.kind === "fatigue" ? "var(--tangerine)" : "var(--lime)",
-                      }}
-                    >
-                      {r.kind}
-                    </span>
-                    <span className="text-[13px] text-fg-1">{r.body}</span>
-                  </div>
-                ))}
+          {data && (
+            <>
+              {/* 4 metric cards */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, 1fr)",
+                  gap: 12,
+                  flexShrink: 0,
+                }}
+              >
+                <BigStat
+                  label="Fitness · CTL"
+                  value={data.current.ctl.toFixed(0)}
+                  delta={ctlDelta}
+                  tone="var(--run)"
+                  desc="Long-term training load. Builds gradually over months."
+                />
+                <BigStat
+                  label="Fatigue · ATL"
+                  value={data.current.atl.toFixed(0)}
+                  delta={atlDelta}
+                  tone="var(--bike)"
+                  desc="Short-term stress. Rises fast after hard sessions."
+                />
+                <BigStat
+                  label="Form · TSB"
+                  value={
+                    data.current.tsb > 0
+                      ? `+${data.current.tsb.toFixed(0)}`
+                      : data.current.tsb.toFixed(0)
+                  }
+                  delta={tsbDelta}
+                  tone="var(--swim)"
+                  desc="Freshness = Fitness − Fatigue. Positive means ready to race."
+                />
+                <RampCard rampPerWeek={rampPerWeek} />
               </div>
-            )}
-          </>
-        )}
+
+              {/* Performance Management chart */}
+              <PerfChart series={data.series} />
+
+              {/* Weekly Volume by Sport */}
+              <WeeklyVolume weekly={data.weekly} />
+
+              {/* Recommendations */}
+              {data.recommendations.length > 0 && (
+                <div className="space-y-2" style={{ flexShrink: 0 }}>
+                  {data.recommendations.map((r) => (
+                    <div key={r.body} className="card">
+                      <span
+                        className="text-[10px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded-sm mr-2"
+                        style={{
+                          background:
+                            r.kind === "fatigue"
+                              ? "color-mix(in oklch, var(--tangerine) 20%, transparent)"
+                              : "color-mix(in oklch, var(--lime) 20%, transparent)",
+                          color: r.kind === "fatigue" ? "var(--tangerine)" : "var(--lime)",
+                        }}
+                      >
+                        {r.kind}
+                      </span>
+                      <span className="text-[13px] text-fg-1">{r.body}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -98,7 +98,10 @@ export function SettingsModal({ open, onOpenChange }: Props) {
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-line-soft">
-            <Dialog.Title className="text-[13px] font-medium text-fg-0 m-0" style={{ lineHeight: 1 }}>
+            <Dialog.Title
+              className="text-[13px] font-medium text-fg-0 m-0"
+              style={{ lineHeight: 1 }}
+            >
               Preferences
             </Dialog.Title>
             <Dialog.Close asChild>
@@ -107,8 +110,13 @@ export function SettingsModal({ open, onOpenChange }: Props) {
                 className="text-fg-3 hover:text-fg-1 transition-colors"
                 style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}
               >
-                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                  <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path
+                    d="M3 3l10 10M13 3L3 13"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </button>
             </Dialog.Close>
@@ -156,7 +164,9 @@ export function SettingsModal({ open, onOpenChange }: Props) {
                     { value: "dark", label: "Dark" },
                     { value: "light", label: "Light" },
                   ]}
-                  onChange={(v) => { if (v !== theme) toggle(); }}
+                  onChange={(v) => {
+                    if (v !== theme) toggle();
+                  }}
                 />
               </Row>
             </Section>

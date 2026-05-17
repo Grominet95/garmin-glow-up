@@ -40,8 +40,8 @@ const MOCK_DATA: RacePredictorData = {
 const RIEGEL: Record<string, number> = {
   "5 km": (5 / 10) ** 1.06,
   "10 km": 1,
-  "Half": (21.0975 / 10) ** 1.06,
-  "Mara": (42.195 / 10) ** 1.06,
+  Half: (21.0975 / 10) ** 1.06,
+  Mara: (42.195 / 10) ** 1.06,
 };
 
 function smoothPath(pts: [number, number][]): string {
@@ -102,7 +102,7 @@ export function RacePredictorCard({ switcher, data }: Props) {
 
   const sparkLine = hasVariation ? smoothPath(pts) : "";
   const sparkArea = hasVariation ? `${sparkLine} L${W} ${H - PB} L0 ${H - PB} Z` : "";
-  const last = pts.length > 0 ? pts[pts.length - 1] : [W, H / 2] as [number, number];
+  const last = pts.length > 0 ? pts[pts.length - 1] : ([W, H / 2] as [number, number]);
 
   return (
     <div className="card" style={{ display: "flex", flexDirection: "column" }}>
@@ -117,12 +117,10 @@ export function RacePredictorCard({ switcher, data }: Props) {
         {d.predictions.map((p) => {
           const isSelected = p.distance === selected;
           return (
-            <div
+            <button
               key={p.distance}
+              type="button"
               onClick={() => setSelected(p.distance)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === "Enter" && setSelected(p.distance)}
               style={{
                 display: "grid",
                 gridTemplateColumns: "54px 1fr auto",
@@ -138,6 +136,11 @@ export function RacePredictorCard({ switcher, data }: Props) {
                 borderLeft: `2px solid ${isSelected ? "var(--run)" : "transparent"}`,
                 cursor: "pointer",
                 userSelect: "none",
+                width: "calc(100% + 12px)",
+                textAlign: "left",
+                border: "none",
+                color: "inherit",
+                font: "inherit",
               }}
             >
               <span
@@ -175,7 +178,7 @@ export function RacePredictorCard({ switcher, data }: Props) {
                 {fmtDelta(p.deltaSec)}
                 <span style={{ color: "var(--fg-3)", marginLeft: 3 }}>30d</span>
               </span>
-            </div>
+            </button>
           );
         })}
       </div>

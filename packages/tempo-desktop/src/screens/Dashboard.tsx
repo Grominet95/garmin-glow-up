@@ -217,9 +217,7 @@ export function Dashboard() {
   const tsbMin = Math.min(...form28d.tsb);
   const tsbMax = Math.max(...form28d.tsb);
   const tsbZeroY =
-    tsbMin < 0 && tsbMax > 0
-      ? 4 + 52 * (1 - (0 - tsbMin) / (tsbMax - tsbMin))
-      : null;
+    tsbMin < 0 && tsbMax > 0 ? 4 + 52 * (1 - (0 - tsbMin) / (tsbMax - tsbMin)) : null;
 
   const todayDisplay = new Date(`${data.todayLocal}T12:00:00`).toLocaleDateString("en-US", {
     weekday: "long",
@@ -246,7 +244,15 @@ export function Dashboard() {
           {/* ── Row 1: Status · Body Battery · Sleep ── */}
           <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr", gap: 14 }}>
             {/* STATUS */}
-            <div className="card" style={{ padding: "18px 20px 76px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <div
+              className="card"
+              style={{
+                padding: "18px 20px 76px",
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
               <div
                 style={{
                   fontSize: 11,

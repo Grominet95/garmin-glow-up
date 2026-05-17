@@ -50,14 +50,25 @@ export function TopBar({ crumbs = [], right }: TopBarProps) {
       </div>
       <div className="flex-1" />
       {status && (
-        <div ref={menuRef} className="relative inline-flex" style={{ opacity: status.running ? 0.7 : 1 }}>
+        <div
+          ref={menuRef}
+          className="relative inline-flex"
+          style={{ opacity: status.running ? 0.7 : 1 }}
+        >
           {/* Main pill: quick sync */}
           <button
             type="button"
-            onClick={() => { triggerQuickSync(); setMenuOpen(false); }}
+            onClick={() => {
+              triggerQuickSync();
+              setMenuOpen(false);
+            }}
             disabled={status.running}
             className={`${pillBase} rounded-l-full`}
-            style={{ ...pillStyle, cursor: status.running ? "default" : "pointer", borderRight: "none" }}
+            style={{
+              ...pillStyle,
+              cursor: status.running ? "default" : "pointer",
+              borderRight: "none",
+            }}
           >
             <span
               className="w-1.5 h-1.5 rounded-full"
@@ -92,24 +103,38 @@ export function TopBar({ crumbs = [], right }: TopBarProps) {
           {menuOpen && (
             <div
               className="absolute right-0 top-full mt-1.5 rounded-lg border border-line-soft text-[12px] text-fg-1 z-50 overflow-hidden"
-              style={{ background: "var(--bg-1)", minWidth: 170, boxShadow: "0 4px 16px rgba(0,0,0,.18)" }}
+              style={{
+                background: "var(--bg-1)",
+                minWidth: 170,
+                boxShadow: "0 4px 16px rgba(0,0,0,.18)",
+              }}
             >
               <button
                 type="button"
-                onClick={() => { triggerQuickSync(); setMenuOpen(false); }}
+                onClick={() => {
+                  triggerQuickSync();
+                  setMenuOpen(false);
+                }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--bg-2)] transition-colors"
               >
                 <Icon name="sync" size={13} color="var(--accent)" />
-                <span>Quick sync <span className="text-fg-3">(7 days)</span></span>
+                <span>
+                  Quick sync <span className="text-fg-3">(7 days)</span>
+                </span>
               </button>
               <div className="h-px mx-2" style={{ background: "var(--line-soft)" }} />
               <button
                 type="button"
-                onClick={() => { triggerSync(); setMenuOpen(false); }}
+                onClick={() => {
+                  triggerSync();
+                  setMenuOpen(false);
+                }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--bg-2)] transition-colors"
               >
                 <Icon name="sync" size={13} color="var(--fg-2)" />
-                <span>Full sync <span className="text-fg-3">(12 months)</span></span>
+                <span>
+                  Full sync <span className="text-fg-3">(12 months)</span>
+                </span>
               </button>
             </div>
           )}

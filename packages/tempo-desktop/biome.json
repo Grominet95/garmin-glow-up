@@ -1,7 +1,7 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "files": {
-    "ignore": ["src/routeTree.gen.ts", "src-tauri/"]
+    "ignore": ["src/routeTree.gen.ts", "src-tauri/", "dist/"]
   },
   "organizeImports": { "enabled": true },
   "linter": {

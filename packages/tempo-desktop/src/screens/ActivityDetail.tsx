@@ -1,9 +1,9 @@
-import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRef, useState } from "react";
 import { SkeletonCard } from "../components/Skeleton";
 import { TopBar } from "../components/TopBar";
-import { api } from "../lib/api";
 import { useActivity } from "../hooks/useActivity";
+import { api } from "../lib/api";
 
 const ZONE_COLORS = ["var(--z1)", "var(--z2)", "var(--z3)", "var(--z4)", "var(--z5)"];
 
@@ -104,7 +104,7 @@ function polylineToSvgPath(
   pts: [number, number][],
   svgW: number,
   svgH: number,
-  pad = 20,
+  pad = 20
 ): { d: string; start: [number, number]; end: [number, number] } {
   if (pts.length === 0) return { d: "", start: [0, 0], end: [0, 0] };
   const lats = pts.map((p) => p[0]);
@@ -494,9 +494,15 @@ export function ActivityDetail({ id }: Props) {
               {data.subtitle}
             </span>
             <button
+              type="button"
               className="chip"
               onClick={openEdit}
-              style={{ cursor: "pointer", background: "none", border: "1px solid var(--line-soft)", padding: "2px 8px" }}
+              style={{
+                cursor: "pointer",
+                background: "none",
+                border: "1px solid var(--line-soft)",
+                padding: "2px 8px",
+              }}
             >
               ✎ Edit
             </button>
@@ -516,6 +522,7 @@ export function ActivityDetail({ id }: Props) {
           }}
         >
           <input
+            // biome-ignore lint/a11y/noAutofocus: intentional focus on modal open
             autoFocus
             value={editTitle}
             onChange={(e) => setEditTitle(e.target.value)}
@@ -551,13 +558,20 @@ export function ActivityDetail({ id }: Props) {
           />
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <button
+              type="button"
               className="chip"
               onClick={() => setEditing(false)}
-              style={{ cursor: "pointer", background: "none", border: "1px solid var(--line-soft)", padding: "3px 12px" }}
+              style={{
+                cursor: "pointer",
+                background: "none",
+                border: "1px solid var(--line-soft)",
+                padding: "3px 12px",
+              }}
             >
               Annuler
             </button>
             <button
+              type="button"
               className="chip"
               onClick={saveEdit}
               disabled={saving}
@@ -1163,7 +1177,11 @@ export function ActivityDetail({ id }: Props) {
                   { label: "Dist", value: (selDist / 1000).toFixed(2), unit: "km" },
                   { label: "Time", value: fmtDuration(selTime), unit: "" },
                   { label: "Pace", value: fmtPace(selAvgPace), unit: "/km" },
-                  { label: "HR", value: selAvgHR > 0 ? String(Math.round(selAvgHR)) : "—", unit: selAvgHR > 0 ? "bpm" : "" },
+                  {
+                    label: "HR",
+                    value: selAvgHR > 0 ? String(Math.round(selAvgHR)) : "—",
+                    unit: selAvgHR > 0 ? "bpm" : "",
+                  },
                   ...(selAvgCad > 0
                     ? [{ label: "Cad", value: String(Math.round(selAvgCad)), unit: "spm" }]
                     : []),
