@@ -66,15 +66,15 @@ jobs:
           key: ${{ matrix.os }}-uv-${{ hashFiles('**/uv.lock') }}
 
       - run: pnpm install --frozen-lockfile
-      - run: uv sync --project packages/tempo-sync
+      - run: uv sync --project packages/garmin-glow-up-sync
 
-      - name: Build tempo-sync binary (PyInstaller)
-        working-directory: packages/tempo-sync
+      - name: Build garmin-glow-up binary (PyInstaller)
+        working-directory: packages/garmin-glow-up-sync
         shell: bash
         run: |
-          uv run pyinstaller --onefile --name tempo-sync-${{ matrix.sync-target }}${{ matrix.os == 'windows-latest' && '.exe' || '' }} src/tempo_sync/__main__.py
-          mkdir -p ../tempo-desktop/src-tauri/binaries
-          cp dist/tempo-sync-${{ matrix.sync-target }}${{ matrix.os == 'windows-latest' && '.exe' || '' }} ../tempo-desktop/src-tauri/binaries/
+          uv run pyinstaller --onefile --name garmin-glow-up-${{ matrix.sync-target }}${{ matrix.os == 'windows-latest' && '.exe' || '' }} src/garmin_glow_up/__main__.py
+          mkdir -p ../garmin-glow-up-desktop/src-tauri/binaries
+          cp dist/garmin-glow-up-${{ matrix.sync-target }}${{ matrix.os == 'windows-latest' && '.exe' || '' }} ../garmin-glow-up-desktop/src-tauri/binaries/
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
@@ -89,9 +89,9 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
-          projectPath: packages/tempo-desktop
+          projectPath: packages/garmin-glow-up-desktop
           tagName: ${{ github.ref_name }}
-          releaseName: Tempo ${{ github.ref_name }}
+          releaseName: Garmin Glow Up ${{ github.ref_name }}
           releaseBody: "See CHANGELOG.md for details."
           releaseDraft: true
           args: --target ${{ matrix.target }}

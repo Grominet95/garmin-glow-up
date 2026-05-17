@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+ROSE_B='\033[1;38;5;211m'
+DIM='\033[2m'
+R='\033[0m'
+
+case "${1:-}" in
+  install)
+    exec "$SCRIPT_DIR/setup.sh"
+    ;;
+  launch)
+    exec "$SCRIPT_DIR/dev.sh"
+    ;;
+  *)
+    echo ""
+    echo -e "  ${ROSE_B}✦ Garmin Glow Up${R}"
+    echo ""
+    echo -e "  ${DIM}Usage:${R}"
+    echo -e "    ./garmin-glow-up install   ${DIM}# First-time setup${R}"
+    echo -e "    ./garmin-glow-up launch    ${DIM}# Start the app${R}"
+    echo ""
+    exit 1
+    ;;
+esac

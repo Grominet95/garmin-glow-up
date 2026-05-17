@@ -19,7 +19,7 @@ divider() { echo -e "\n  ${DIM}$(printf '%.0s─' {1..46})${R}"; }
 # ── Header ──────────────────────────────────────────────────────
 clear
 echo ""
-echo -e "  ${ROSE_B}✦ Garmin Glow Up${R}"
+echo -e "  ${ROSE_B}✦ Garmin Glow Up — Installation${R}"
 echo ""
 echo -e "  ${DIM}Setting up your local environment.${R}"
 divider
@@ -53,15 +53,15 @@ ok "pnpm install done"
 # ── Python dependencies ─────────────────────────────────────────
 divider
 step "Installing Python dependencies"
-uv sync --project packages/tempo-sync
+uv sync --project packages/garmin-glow-up-sync
 ok "uv sync done"
 
 # ── Database ────────────────────────────────────────────────────
 divider
-step "Running database migrations"
-note "Database lives at ~/.tempo/tempo.db (local to your machine, never committed)"
-(cd packages/tempo-sync && uv run alembic upgrade head)
-ok "Migrations applied"
+step "Setting up database"
+note "Database lives at ~/.garmin-glow-up/garmin-glow-up.db (local to your machine, never committed)"
+(cd packages/garmin-glow-up-sync && uv run alembic upgrade head)
+ok "Database ready"
 
 # ── Garmin auth ─────────────────────────────────────────────────
 divider
@@ -71,7 +71,7 @@ echo -e "  ${DIM}Your credentials are stored in the OS keychain.${R}"
 echo -e "  ${DIM}Nothing is written to disk in plain text.${R}"
 echo ""
 
-uv run --project packages/tempo-sync tempo-sync auth login
+uv run --project packages/garmin-glow-up-sync garmin-glow-up auth login
 
 ok "Garmin account connected"
 
@@ -80,13 +80,9 @@ divider
 echo ""
 echo -e "  ${ROSE_B}✦  You're all set.${R}"
 echo ""
-echo -e "  Start Garmin Glow Up:\n"
-echo -e "  ${ROSE}One command${R}  ${DIM}(server + app together)${R}"
-echo -e "  ${BOLD}  pnpm dev${R}"
+echo -e "  Start Garmin Glow Up:"
 echo ""
-echo -e "  ${DIM}Or split across two terminals:${R}"
-echo -e "  ${DIM}  Terminal 1  ${R}TEMPO_DEV_SIDECAR=external uv run --project packages/tempo-sync tempo-sync serve"
-echo -e "  ${DIM}  Terminal 2  ${R}pnpm --filter tempo-desktop tauri dev"
+echo -e "  ${ROSE}  ./garmin-glow-up launch${R}"
 echo ""
 divider
 echo ""

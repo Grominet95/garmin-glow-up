@@ -12,12 +12,12 @@ target/
 *.db-shm
 *.db-wal
 *.db.bak
-~/.tempo/
+~/.garmin-glow-up/
 .env
 .env.local
 *.key
 *.pem
 **/src-tauri/binaries/
 **/src-tauri/target/
-packages/tempo-desktop/src/types.ts
+packages/garmin-glow-up-desktop/src/types.ts
 .claude/

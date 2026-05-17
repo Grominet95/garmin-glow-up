@@ -5,7 +5,7 @@ set -euo pipefail
 
 trap 'kill 0' EXIT INT TERM
 
-TEMPO_DEV_SIDECAR=external \
-  uv run --project packages/tempo-sync tempo-sync serve &
+GGU_DEV_SIDECAR=external \
+  uv run --project packages/garmin-glow-up-sync garmin-glow-up serve &
 
-pnpm --filter tempo-desktop tauri dev
+pnpm --filter garmin-glow-up-desktop tauri dev
