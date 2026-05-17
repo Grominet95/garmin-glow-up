@@ -6,6 +6,7 @@ export interface ActivityDetailResponse {
   sport: string;
   subSport: string | null;
   title: string;
+  description: string | null;
   subtitle: string;
   accent: string;
   hero: Array<{ label: string; value: string; unit: string; tone?: string | null }>;

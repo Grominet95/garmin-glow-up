@@ -14,6 +14,7 @@ from tempo_sync.api.dashboard import router as dashboard_router
 from tempo_sync.api.health import router as health_router
 from tempo_sync.api.load import router as load_router
 from tempo_sync.api.progress import router as progress_router
+from tempo_sync.api.settings import router as settings_router
 from tempo_sync.api.sync import router as sync_router
 from tempo_sync.db.models import Base
 from tempo_sync.db.session import get_engine
@@ -57,6 +58,7 @@ def create_app() -> tuple[FastAPI, str]:
         calendar_router,
         health_router,
         progress_router,
+        settings_router,
         sync_router,
     ]:
         app.include_router(router)

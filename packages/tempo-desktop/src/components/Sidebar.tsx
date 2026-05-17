@@ -1,8 +1,10 @@
 import { Link, useMatchRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import logoDark from "../assets/logo-dark.png";
 import logoLight from "../assets/logo-light.png";
 import { useTheme } from "../hooks/useTheme";
 import { Icon } from "./Icon";
+import { SettingsModal } from "./SettingsModal";
 
 const NAV = [
   { to: "/", label: "Today", icon: "dashboard" as const, kbd: "1" },
@@ -15,7 +17,8 @@ const NAV = [
 
 export function Sidebar() {
   const matchRoute = useMatchRoute();
-  const { theme, toggle } = useTheme();
+  const { theme } = useTheme();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <aside
@@ -57,16 +60,15 @@ export function Sidebar() {
 
       <button
         type="button"
-        onClick={toggle}
+        onClick={() => setSettingsOpen(true)}
         className="flex items-center gap-2.5 px-2 py-1.5 text-[13px] text-fg-2 hover:text-fg-0 transition-colors w-full rounded-sm hover:bg-bg-2/60"
         style={{ background: "none", border: "none", cursor: "pointer" }}
       >
         <Icon name="settings" size={14} />
         <span>Preferences</span>
-        <span className="ml-auto font-mono text-[10.5px] text-fg-3">
-          {theme === "dark" ? "☀" : "◑"}
-        </span>
       </button>
+
+      <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
     </aside>
   );
 }

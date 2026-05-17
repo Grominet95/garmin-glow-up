@@ -78,6 +78,7 @@ class Activity(Base):
     device: Mapped[str | None] = mapped_column(Text)
     has_dynamics: Mapped[bool] = mapped_column(Boolean, default=False)
     has_power: Mapped[bool] = mapped_column(Boolean, default=False)
+    description: Mapped[str | None] = mapped_column(Text)
     fit_path: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime | None] = mapped_column(DateTime)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime)

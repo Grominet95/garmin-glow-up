@@ -163,6 +163,7 @@ class ActivityDetailResponse(BaseModel):
     sport: str
     subSport: str | None
     title: str
+    description: str | None
     subtitle: str
     accent: str
     hero: list[StatOut]
@@ -370,6 +371,7 @@ def get_activity(_token: TokenDep, db: DbDep, activity_id: int):
         sport=act.sport,
         subSport=act.sub_sport,
         title=act.title or f"{act.sport.title()} · {dist_km:.1f} km",
+        description=act.description,
         subtitle=f"{act.sport.title()} · {subtitle_date}",
         accent=accent,
         hero=hero,
@@ -396,3 +398,29 @@ def get_activity(_token: TokenDep, db: DbDep, activity_id: int):
         ),
         missing=missing,
     )
+
+
+class ActivityPatch(BaseModel):
+    title: str | None = None
+    description: str | None = None
+
+
+class ActivityPatchResponse(BaseModel):
+    id: int
+    title: str
+    description: str | None
+
+
+@router.patch("/activities/{activity_id}", response_model=ActivityPatchResponse)
+def patch_activity(_token: TokenDep, db: DbDep, activity_id: int, body: ActivityPatch):
+    from fastapi import HTTPException
+    act = db.query(Activity).filter(Activity.id == activity_id).first()
+    if not act:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    if body.title is not None:
+        act.title = body.title.strip() or act.title
+    if body.description is not None:
+        act.description = body.description.strip() or None
+    db.commit()
+    db.refresh(act)
+    return ActivityPatchResponse(id=act.id, title=act.title or "", description=act.description)

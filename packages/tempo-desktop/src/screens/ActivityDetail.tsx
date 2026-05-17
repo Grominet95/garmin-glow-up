@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { SkeletonCard } from "../components/Skeleton";
 import { TopBar } from "../components/TopBar";
+import { api } from "../lib/api";
 import { useActivity } from "../hooks/useActivity";
 
 const ZONE_COLORS = ["var(--z1)", "var(--z2)", "var(--z3)", "var(--z4)", "var(--z5)"];
@@ -270,9 +272,37 @@ interface Props {
 
 export function ActivityDetail({ id }: Props) {
   const { data, isLoading, error } = useActivity(id);
+  const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
   const [cursorPct, setCursorPct] = useState(0.61);
   const [selectedLaps, setSelectedLaps] = useState<Set<number>>(new Set());
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  function openEdit() {
+    if (!data) return;
+    setEditTitle(data.title);
+    setEditDesc(data.description ?? "");
+    setEditing(true);
+  }
+
+  async function saveEdit() {
+    if (!data) return;
+    setSaving(true);
+    try {
+      await api(`/activities/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: editTitle, description: editDesc }),
+      });
+      await queryClient.invalidateQueries({ queryKey: ["activity", id] });
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -463,9 +493,88 @@ export function ActivityDetail({ id }: Props) {
               />
               {data.subtitle}
             </span>
+            <button
+              className="chip"
+              onClick={openEdit}
+              style={{ cursor: "pointer", background: "none", border: "1px solid var(--line-soft)", padding: "2px 8px" }}
+            >
+              ✎ Edit
+            </button>
           </div>
         }
       />
+
+      {editing && (
+        <div
+          style={{
+            padding: "12px 20px",
+            background: "var(--bg-1)",
+            borderBottom: "1px solid var(--line-soft)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+          }}
+        >
+          <input
+            autoFocus
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            placeholder="Titre"
+            style={{
+              background: "var(--bg-0)",
+              border: "1px solid var(--line-soft)",
+              borderRadius: "var(--r-sm)",
+              padding: "6px 10px",
+              fontSize: 14,
+              color: "var(--fg-0)",
+              width: "100%",
+              outline: "none",
+            }}
+          />
+          <textarea
+            value={editDesc}
+            onChange={(e) => setEditDesc(e.target.value)}
+            placeholder="Description (optionnelle)"
+            rows={2}
+            style={{
+              background: "var(--bg-0)",
+              border: "1px solid var(--line-soft)",
+              borderRadius: "var(--r-sm)",
+              padding: "6px 10px",
+              fontSize: 13,
+              color: "var(--fg-0)",
+              width: "100%",
+              resize: "vertical",
+              outline: "none",
+              fontFamily: "inherit",
+            }}
+          />
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button
+              className="chip"
+              onClick={() => setEditing(false)}
+              style={{ cursor: "pointer", background: "none", border: "1px solid var(--line-soft)", padding: "3px 12px" }}
+            >
+              Annuler
+            </button>
+            <button
+              className="chip"
+              onClick={saveEdit}
+              disabled={saving}
+              style={{
+                cursor: saving ? "default" : "pointer",
+                background: accent,
+                color: "#fff",
+                border: "none",
+                padding: "3px 12px",
+                opacity: saving ? 0.6 : 1,
+              }}
+            >
+              {saving ? "…" : "Enregistrer"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div
         className="flex-1 overflow-y-auto p-5"
