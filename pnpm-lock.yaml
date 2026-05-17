@@ -8,7 +8,7 @@ importers:
 
   .: {}
 
-  packages/tempo-desktop:
+  packages/garmin-glow-up-desktop:
     dependencies:
       '@fontsource/geist':
         specifier: ^5.0.0
@@ -3998,7 +3998,7 @@ snapshots:
 
   d3-geo@3.1.0:
     dependencies:
-      d3-array: 3.2.1
+      d3-array: 3.2.4
 
   d3-geo@3.1.1:
     dependencies:
@@ -4027,8 +4027,8 @@ snapshots:
 
   d3-scale@4.0.2:
     dependencies:
-      d3-array: 3.2.1
-      d3-format: 3.1.0
+      d3-array: 3.2.4
+      d3-format: 3.1.2
       d3-interpolate: 3.0.1
       d3-time: 3.1.0
       d3-time-format: 4.1.0
@@ -4049,7 +4049,7 @@ snapshots:
 
   d3-time@3.1.0:
     dependencies:
-      d3-array: 3.2.1
+      d3-array: 3.2.4
 
   d3-timer@3.0.1: {}
 
