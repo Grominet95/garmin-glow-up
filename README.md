@@ -11,7 +11,7 @@
 
 <br/>
 
-<img src="screenshots/GarminGlowUpCapture1.png" width="100%" alt="Garmin Glow Up — Dashboard" />
+<img src="screenshots/GarminGlowUpCapture1.png" width="100%" alt="Garmin Glow Up: Dashboard" />
 
 <br/>
 
@@ -27,7 +27,7 @@
 
 Garmin makes great hardware. The software, not so much. Garmin Glow Up is a native macOS app that pulls your data from Garmin Connect and presents it the way it deserves: clean, fast, and actually pleasant to look at.
 
-Everything runs locally — your data stays on your machine. Not affiliated with Garmin Ltd.
+Everything runs locally: your data stays on your machine. Not affiliated with Garmin Ltd.
 
 ## Get started
 
@@ -56,7 +56,7 @@ cd garmin-glow-up
 ./garmin-glow-up install
 ```
 
-This installs all dependencies, sets up the database, and connects your Garmin account. Credentials are stored in the macOS keychain — nothing written to disk in plain text.
+This installs all dependencies, sets up the database, and connects your Garmin account. Credentials are stored in the macOS keychain: nothing written to disk in plain text.
 
 ### 4. Launch
 
@@ -89,9 +89,9 @@ The database lives at `~/.garmin-glow-up/garmin-glow-up.db` on your machine and 
 
 ## Tech stack
 
-**Backend** — Python 3.12, FastAPI, SQLAlchemy, Alembic, APScheduler, garminconnect, fitparse, keyring
+**Backend**: Python 3.12, FastAPI, SQLAlchemy, Alembic, APScheduler, garminconnect, fitparse, keyring
 
-**Frontend** — React 19, TanStack Router, TanStack Query, Zustand, Tailwind CSS, Tauri 2
+**Frontend**: React 19, TanStack Router, TanStack Query, Zustand, Tailwind CSS, Tauri 2
 
 ## License
 
