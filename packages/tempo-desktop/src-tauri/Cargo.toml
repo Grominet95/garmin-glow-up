@@ -1,5 +1,5 @@
 [package]
-name = "tempo-desktop"
+name = "garmin-glow-up"
 version = "0.1.0"
 description = "Garmin Glow Up desktop"
 authors = []
@@ -13,7 +13,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["macos-private-api", "tray-icon", "devtools"] }
+tauri = { version = "2", features = [ "tray-icon", "devtools"] }
 tauri-plugin-updater = "2"
 tauri-plugin-deep-link = "2"
 tauri-plugin-dialog = "2"

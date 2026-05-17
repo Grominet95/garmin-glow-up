@@ -17,14 +17,15 @@
         "height": 830,
         "resizable": true,
         "fullscreen": false,
-        "decorations": false,
-        "transparent": true,
+        "maximized": true,
+        "decorations": true,
+        "transparent": false,
         "center": true,
         "minWidth": 900,
         "minHeight": 600
       }
     ],
-    "macOSPrivateApi": true
+    "macOSPrivateApi": false
   },
   "bundle": {
     "active": true,
