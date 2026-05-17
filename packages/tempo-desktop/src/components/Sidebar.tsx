@@ -1,5 +1,6 @@
 import { Link, useMatchRoute } from "@tanstack/react-router";
-import logo from "../assets/logo.png";
+import logoDark from "../assets/logo-dark.png";
+import logoLight from "../assets/logo-light.png";
 import { useTheme } from "../hooks/useTheme";
 import { Icon } from "./Icon";
 
@@ -23,9 +24,9 @@ export function Sidebar() {
     >
       <div className="flex items-center gap-2 px-2 pb-4">
         <img
-          src={logo}
+          src={theme === "dark" ? logoDark : logoLight}
           alt="Garmin Glow Up"
-          style={{ height: 80, width: "auto", objectFit: "contain" }}
+          style={{ height: 100, width: "auto", objectFit: "contain" }}
         />
         <span className="ml-auto text-[10px] text-fg-3 font-mono">0.1.0</span>
       </div>
