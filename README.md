@@ -1,6 +1,31 @@
+<div align="center">
+
 # Garmin Glow Up
 
 **What if Garmin Connect actually looked good?**
+
+[![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?logo=apple&logoColor=white)](https://github.com/Grominet95/garmin-glow-up)
+[![Backend](https://img.shields.io/badge/backend-Python%203.12-3776ab?logo=python&logoColor=white)](packages/tempo-sync)
+[![Frontend](https://img.shields.io/badge/frontend-Tauri%202%20%2B%20React%2019-ffc131?logo=tauri&logoColor=white)](packages/tempo-desktop)
+[![License](https://img.shields.io/badge/license-MIT%20%2F%20AGPL--3.0-blue)](LICENSE)
+
+<br/>
+
+<img src="GarminGlowUpCapture1.png" width="100%" alt="Garmin Glow Up — Dashboard" />
+
+<br/>
+
+<table>
+  <tr>
+    <td width="33%"><img src="GarminGlowUpCapture2.png" width="100%" alt="Screenshot 2" /></td>
+    <td width="33%"><img src="GarminGlowUpCapture3.png" width="100%" alt="Screenshot 3" /></td>
+    <td width="33%"><img src="GarminGlowUpCapture4.png" width="100%" alt="Screenshot 4" /></td>
+  </tr>
+</table>
+
+</div>
+
+---
 
 Garmin makes great hardware. The software, not so much. Garmin Glow Up is a native macOS app that pulls your data from Garmin Connect and presents it the way it deserves: clean, fast, and actually pleasant to look at.
 
