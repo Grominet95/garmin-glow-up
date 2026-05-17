@@ -47,7 +47,8 @@ def _pull_day(client: GarminClient, db: Session, d: date, date_str: str) -> None
                 metric.sleep_end = datetime.fromtimestamp(end_gmt / 1000)
 
             stages = sleep.get("sleepLevels", [])
-            logger.debug("sleepLevels for %s: %d segments, keys=%s", date_str, len(stages or []), list((stages[0] if stages else {}).keys()))
+            first_keys = list((stages[0] if stages else {}).keys())
+            logger.debug("sleepLevels for %s: %d segments, keys=%s", date_str, len(stages or []), first_keys)
             db.query(SleepStage).filter(SleepStage.date == d).delete()
             _str_stage = {"deep": "deep", "light": "light", "rem": "rem", "awake": "awake"}
             # Garmin may return activityLevel as a numeric code instead of a string
@@ -70,7 +71,7 @@ def _pull_day(client: GarminClient, db: Session, d: date, date_str: str) -> None
                         continue
                     try:
                         # startGMT is a UTC string — use epoch arithmetic to avoid tz confusion
-                        start_epoch = datetime.fromisoformat(str(start_ts)).replace(tzinfo=timezone.utc).timestamp()
+                        start_epoch = datetime.fromisoformat(str(start_ts)).replace(tzinfo=timezone.utc).timestamp()  # noqa: UP017
                         offset_min = int((start_epoch - sleep_start_epoch) / 60)
                         if offset_min >= 0:
                             db.add(SleepStage(date=d, t_offset_min=offset_min, stage=stage_name))

@@ -129,7 +129,13 @@ def get_health(
         hrv_delta = round(hrv_last - hrv_avg, 1) if hrv_last and hrv_avg else None
 
         score = sleep_m.sleep_score or 0
-        score_label = "Excellent" if score >= 80 else "Restorative" if score >= 70 else "Good" if score >= 60 else "Fair" if score >= 40 else "Poor"
+        score_label = (
+            "Excellent" if score >= 80
+            else "Restorative" if score >= 70
+            else "Good" if score >= 60
+            else "Fair" if score >= 40
+            else "Poor"
+        )
         last_night = LastNight(
             durationS=sleep_m.sleep_seconds,
             score=score,
