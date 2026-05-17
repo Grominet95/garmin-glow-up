@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from tempo_sync.api import deps
 from tempo_sync.api.activities import router as activities_router
+from tempo_sync.api.auth import router as auth_router
 from tempo_sync.api.calendar import router as calendar_router
 from tempo_sync.api.dashboard import router as dashboard_router
 from tempo_sync.api.health import router as health_router
@@ -52,6 +53,7 @@ def create_app() -> tuple[FastAPI, str]:
     )
 
     for router in [
+        auth_router,
         dashboard_router,
         activities_router,
         load_router,

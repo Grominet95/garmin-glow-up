@@ -1,7 +1,10 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import { invoke } from "@tauri-apps/api/core";
+import { exit } from "@tauri-apps/plugin-process";
 import { useProfile } from "../hooks/useProfile";
 import { useSettings, useUpdateSettings } from "../hooks/useSettings";
 import { useTheme } from "../hooks/useTheme";
+import { api } from "../lib/api";
 
 interface Props {
   open: boolean;
@@ -61,6 +64,20 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       {children}
     </div>
   );
+}
+
+async function handleSignOut() {
+  try {
+    await api("/auth/logout", { method: "POST" });
+  } catch {
+    // credentials may already be gone
+  }
+  try {
+    await invoke("clear_credentials");
+  } catch {
+    // idem
+  }
+  await exit(0);
 }
 
 export function SettingsModal({ open, onOpenChange }: Props) {
@@ -153,6 +170,25 @@ export function SettingsModal({ open, onOpenChange }: Props) {
                   </div>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="w-full text-left text-[13px] px-3 py-2 rounded-md transition-colors"
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--color-red, #e55)",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.background = "var(--bg-2)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.background = "none";
+                }}
+              >
+                Sign out
+              </button>
             </Section>
 
             {/* Appearance */}
