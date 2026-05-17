@@ -92,6 +92,7 @@ async def patch_settings(_token: TokenDep, body: SettingsPatch) -> SettingsOut:
 class ProfileOut(BaseModel):
     displayName: str | None
     fullName: str | None
+    avatarUrl: str | None
 
 
 @router.get("/profile")
@@ -102,12 +103,12 @@ async def get_profile(_token: TokenDep) -> ProfileOut:
 
         client = GarminClient(TokenStore())
         if not client.resume():
-            return ProfileOut(displayName=None, fullName=None)
-        p = client.user_profile()
-        first = p.get("firstName") or ""
-        last = p.get("lastName") or ""
-        full = f"{first} {last}".strip() or None
-        display = p.get("displayName") or p.get("userName")
-        return ProfileOut(displayName=display, fullName=full)
+            return ProfileOut(displayName=None, fullName=None, avatarUrl=None)
+        p = client._require().client.connectapi("/userprofile-service/socialProfile")
+        return ProfileOut(
+            displayName=p.get("userName"),
+            fullName=p.get("fullName") or p.get("userProfileFullName"),
+            avatarUrl=p.get("profileImageUrlMedium"),
+        )
     except Exception:
-        return ProfileOut(displayName=None, fullName=None)
+        return ProfileOut(displayName=None, fullName=None, avatarUrl=None)

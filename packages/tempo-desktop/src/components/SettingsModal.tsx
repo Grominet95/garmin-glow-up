@@ -38,7 +38,6 @@ function SegmentControl<T extends string>({
           onClick={() => onChange(opt.value)}
           className={[
             "px-3 py-1 text-[12px] transition-colors",
-            i > 0 ? "border-l border-line" : "",
             value === opt.value ? "text-fg-0" : "text-fg-2 hover:text-fg-1",
           ].join(" ")}
           style={{
@@ -60,44 +59,6 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     <div className="flex items-center justify-between gap-4">
       <span className="text-[13px] text-fg-1">{label}</span>
       {children}
-    </div>
-  );
-}
-
-function NumericField({
-  value,
-  unit,
-  onCommit,
-}: {
-  value: number;
-  unit?: string;
-  onCommit: (v: number) => void;
-}) {
-  return (
-    <div className="flex items-center gap-1">
-      <input
-        key={value}
-        type="number"
-        defaultValue={value}
-        onBlur={(e) => {
-          const n = parseInt(e.target.value, 10);
-          if (!isNaN(n) && n > 0 && n !== value) onCommit(n);
-          else e.target.value = String(value);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") e.currentTarget.blur();
-          if (e.key === "Escape") {
-            e.currentTarget.value = String(value);
-            e.currentTarget.blur();
-          }
-        }}
-        className="w-14 text-right text-[13px] text-fg-0 rounded px-2 py-0.5 focus:outline-none focus:border-fg-3"
-        style={{
-          background: "var(--bg-2)",
-          border: "1px solid var(--line)",
-        }}
-      />
-      {unit && <span className="text-[11px] text-fg-3">{unit}</span>}
     </div>
   );
 }
@@ -137,10 +98,7 @@ export function SettingsModal({ open, onOpenChange }: Props) {
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-line-soft">
-            <Dialog.Title
-              className="text-[13px] font-medium text-fg-0 m-0"
-              style={{ lineHeight: 1 }}
-            >
+            <Dialog.Title className="text-[13px] font-medium text-fg-0 m-0" style={{ lineHeight: 1 }}>
               Preferences
             </Dialog.Title>
             <Dialog.Close asChild>
@@ -150,12 +108,7 @@ export function SettingsModal({ open, onOpenChange }: Props) {
                 style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}
               >
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M3 3l10 10M13 3L3 13"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
+                  <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                 </svg>
               </button>
             </Dialog.Close>
@@ -168,18 +121,27 @@ export function SettingsModal({ open, onOpenChange }: Props) {
                 className="flex items-center gap-3 px-3 py-2.5 rounded-md"
                 style={{ background: "var(--bg-2)" }}
               >
+                {/* Avatar */}
                 <div
-                  className="flex items-center justify-center rounded-md text-[11px] font-semibold text-fg-2 shrink-0"
-                  style={{ width: 30, height: 30, background: "var(--bg-3)" }}
+                  className="shrink-0 rounded-md overflow-hidden flex items-center justify-center text-[11px] font-semibold text-fg-2"
+                  style={{ width: 32, height: 32, background: "var(--bg-3)" }}
                 >
-                  {initials}
+                  {profile?.avatarUrl ? (
+                    <img
+                      src={profile.avatarUrl}
+                      alt=""
+                      style={{ width: 32, height: 32, objectFit: "cover" }}
+                    />
+                  ) : (
+                    initials
+                  )}
                 </div>
                 <div className="min-w-0">
                   <div className="text-[13px] text-fg-0 font-medium truncate leading-tight">
                     {profile?.fullName ?? "—"}
                   </div>
                   <div className="text-[11px] text-fg-3 truncate leading-tight mt-0.5">
-                    {profile?.displayName ? `@${profile.displayName}` : "Garmin Connect"}
+                    {profile?.displayName ?? "Garmin Connect"}
                   </div>
                 </div>
               </div>
@@ -194,9 +156,7 @@ export function SettingsModal({ open, onOpenChange }: Props) {
                     { value: "dark", label: "Dark" },
                     { value: "light", label: "Light" },
                   ]}
-                  onChange={(v) => {
-                    if (v !== theme) toggle();
-                  }}
+                  onChange={(v) => { if (v !== theme) toggle(); }}
                 />
               </Row>
             </Section>
@@ -214,35 +174,6 @@ export function SettingsModal({ open, onOpenChange }: Props) {
                 />
               </Row>
             </Section>
-
-            {/* Athlete */}
-            {settings && (
-              <Section label="Athlete">
-                <Row label="Max HR">
-                  <NumericField
-                    value={settings.athlete.maxHr}
-                    unit="bpm"
-                    onCommit={(v) => update.mutate({ athlete: { maxHr: v } })}
-                  />
-                </Row>
-                <Row label="Resting HR">
-                  <NumericField
-                    value={settings.athlete.restingHr}
-                    unit="bpm"
-                    onCommit={(v) => update.mutate({ athlete: { restingHr: v } })}
-                  />
-                </Row>
-                {settings.athlete.ftp !== null && (
-                  <Row label="FTP">
-                    <NumericField
-                      value={settings.athlete.ftp!}
-                      unit="W"
-                      onCommit={(v) => update.mutate({ athlete: { ftp: v } })}
-                    />
-                  </Row>
-                )}
-              </Section>
-            )}
           </div>
 
           {/* Footer */}

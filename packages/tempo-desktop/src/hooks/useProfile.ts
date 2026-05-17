@@ -4,6 +4,7 @@ import { api } from "../lib/api";
 export interface ProfileData {
   displayName: string | null;
   fullName: string | null;
+  avatarUrl: string | null;
 }
 
 export function useProfile() {
