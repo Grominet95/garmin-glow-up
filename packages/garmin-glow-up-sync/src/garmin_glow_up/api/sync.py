@@ -41,6 +41,14 @@ async def _broadcast() -> None:
             pass
 
 
+async def broadcast_mfa_required() -> None:
+    for q in list(_subscribers):
+        try:
+            q.put_nowait({"__event__": "mfa_required"})
+        except asyncio.QueueFull:
+            pass
+
+
 @router.get("/status")
 async def sync_status(_token: TokenDep):
     async def event_stream():
@@ -51,7 +59,8 @@ async def sync_status(_token: TokenDep):
             while True:
                 try:
                     data = await asyncio.wait_for(q.get(), timeout=30)
-                    yield f"event: status\ndata: {json.dumps(data)}\n\n"
+                    event_type = data.pop("__event__", "status")
+                    yield f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
                 except TimeoutError:
                     yield ": keep-alive\n\n"
         finally:

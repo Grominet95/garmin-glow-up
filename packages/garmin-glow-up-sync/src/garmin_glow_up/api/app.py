@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> tuple[FastAPI, str]:
-    dev_mode = os.environ.get("TEMPO_DEV_SIDECAR") == "external"
+    dev_mode = os.environ.get("GGU_DEV_SIDECAR") == "external"
     token = _DEV_TOKEN if dev_mode else secrets.token_hex(16)
     if not dev_mode:
         deps.set_api_token(token)

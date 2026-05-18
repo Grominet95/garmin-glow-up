@@ -37,7 +37,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": ["binaries/garmin-glow-up"],
+    "externalBin": ["binaries/garmin-glow-up-sync"],
     "macOS": {
       "entitlements": null,
       "exceptionDomain": "",

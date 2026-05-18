@@ -9,9 +9,11 @@ import { SkeletonCard } from "../components/Skeleton";
 import { TickArc } from "../components/TickArc";
 import { TopBar } from "../components/TopBar";
 import { VibeChip } from "../components/VibeChip";
+import { useAuthStatus } from "../hooks/useAuthStatus";
 import { useDashboard } from "../hooks/useDashboard";
 import { fmtHr } from "../lib/format";
 import { DashboardEmpty } from "./DashboardEmpty";
+import { LoginScreen } from "./LoginScreen";
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -170,6 +172,7 @@ function MapCard({ sport, routePolyline }: { sport: string; routePolyline: strin
 // ── Main component ────────────────────────────────────────────
 
 export function Dashboard() {
+  const { data: authStatus, isLoading: authLoading } = useAuthStatus();
   const { data, isLoading } = useDashboard();
   const [variant, setVariant] = useState<"readiness" | "predictor">("readiness");
   const switcher: ReactNode = (
@@ -183,7 +186,7 @@ export function Dashboard() {
     />
   );
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="flex flex-col flex-1 overflow-hidden">
         <TopBar crumbs={["Today"]} />
@@ -195,6 +198,10 @@ export function Dashboard() {
         </div>
       </div>
     );
+  }
+
+  if (!authStatus?.authenticated) {
+    return <LoginScreen />;
   }
 
   if (!data || data.state === "empty") {

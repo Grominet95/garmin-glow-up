@@ -21,7 +21,7 @@ pub async fn start(app: &AppHandle) -> Result<(), anyhow::Error> {
         return Ok(());
     }
 
-    let sidecar_cmd = app.shell().sidecar("garmin-glow-up")?;
+    let sidecar_cmd = app.shell().sidecar("garmin-glow-up-sync")?;
     let (mut rx, child) = sidecar_cmd.args(["serve"]).spawn()?;
 
     let handle = app.app_handle().clone();
