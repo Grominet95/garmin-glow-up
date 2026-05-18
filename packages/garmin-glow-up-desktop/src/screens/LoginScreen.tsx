@@ -1,9 +1,9 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { TopBar } from "../components/TopBar";
 import { useInvalidateAuthStatus } from "../hooks/useAuthStatus";
 import { useSyncStore } from "../hooks/useSyncStatus";
-import { api, ApiError } from "../lib/api";
-import { useQueryClient } from "@tanstack/react-query";
+import { ApiError, api } from "../lib/api";
 
 export function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -95,7 +95,10 @@ export function LoginScreen() {
           </div>
 
           {mfaRequired ? (
-            <form onSubmit={handleMfa} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <form
+              onSubmit={handleMfa}
+              style={{ display: "flex", flexDirection: "column", gap: 14 }}
+            >
               <input
                 ref={mfaRef}
                 type="text"
@@ -110,28 +113,40 @@ export function LoginScreen() {
                 autoComplete="one-time-code"
               />
               {error && <p style={errorStyle}>{error}</p>}
-              <button type="submit" disabled={mfaSubmitting || mfaCode.length < 4} style={btnStyle(mfaSubmitting)}>
+              <button
+                type="submit"
+                disabled={mfaSubmitting || mfaCode.length < 4}
+                style={btnStyle(mfaSubmitting)}
+              >
                 {mfaSubmitting ? "Vérification…" : "Confirmer"}
               </button>
             </form>
           ) : (
-            <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <form
+              onSubmit={handleLogin}
+              style={{ display: "flex", flexDirection: "column", gap: 14 }}
+            >
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <label style={labelStyle}>Adresse e-mail</label>
+                <label htmlFor="login-email" style={labelStyle}>
+                  Adresse e-mail
+                </label>
                 <input
+                  id="login-email"
                   type="email"
                   placeholder="prenom.nom@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  autoFocus
                   style={inputStyle}
                   autoComplete="email"
                 />
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <label style={labelStyle}>Mot de passe</label>
+                <label htmlFor="login-password" style={labelStyle}>
+                  Mot de passe
+                </label>
                 <input
+                  id="login-password"
                   type="password"
                   placeholder="••••••••"
                   value={password}
