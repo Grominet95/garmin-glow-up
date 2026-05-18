@@ -56,7 +56,7 @@ cd garmin-glow-up
 ./garmin-glow-up install
 ```
 
-This installs all dependencies, sets up the database, and connects your Garmin account. Credentials are stored in the macOS keychain: nothing written to disk in plain text.
+This installs all dependencies and sets up the local database.
 
 ### 4. Launch
 
@@ -64,7 +64,11 @@ This installs all dependencies, sets up the database, and connects your Garmin a
 ./garmin-glow-up launch
 ```
 
-That's it.
+### 5. Connect and sync
+
+On first launch, the app will ask for your Garmin Connect email and password. Your credentials are stored in the macOS keychain — nothing written to disk in plain text.
+
+Once signed in, click **Sync** to pull your data. The first sync covers a full year of history and may take several minutes depending on your activity count.
 
 ## What you get
 
