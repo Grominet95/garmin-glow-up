@@ -66,9 +66,11 @@ This installs all dependencies and sets up the local database.
 
 ### 5. Connect and sync
 
-On first launch, the app will ask for your Garmin Connect email and password. Your credentials are stored in the macOS keychain — nothing written to disk in plain text.
+On first launch, the app will ask for your Garmin Connect email and password. Your credentials are stored in the macOS keychain, nothing written to disk in plain text.
 
-Once signed in, click **Sync** to pull your data. The first sync covers a full year of history and may take several minutes depending on your activity count.
+Once signed in, click **Sync** to pull your data.
+
+> **The first sync covers a full year of history and may take a bit of time, usually several minutes, depending on your activity count.**
 
 ## What you get
 
@@ -96,6 +98,7 @@ The database lives at `~/.garmin-glow-up/garmin-glow-up.db` on your machine and 
 **Backend**: Python 3.12, FastAPI, SQLAlchemy, Alembic, APScheduler, garminconnect, fitparse, keyring
 
 **Frontend**: React 19, TanStack Router, TanStack Query, Zustand, Tailwind CSS, Tauri 2
+
 
 ## License
 
